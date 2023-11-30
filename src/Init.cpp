@@ -843,12 +843,12 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   int N = param->getSize();
   int A1, A2;
   // int check=0;
-  if (param->getNucleonPositionsFromFile() == 0) {
-    A1 = static_cast<int>(glauber->nucleusA1()) * param->getAverageOverNuclei();
-    A2 = static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
-  } else {
+  if (param->getNucleonPositionsFromFile() == 2) {
     A1 = param->getA1FromFile();
     A2 = param->getA2FromFile();
+  } else {
+    A1 = static_cast<int>(glauber->nucleusA1()) * param->getAverageOverNuclei();
+    A2 = static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
   }
 
   int Npart = 0;
