@@ -648,6 +648,10 @@ void Init::readInNucleusConfigs(const int nucleusA,
             fileName = "C12_VMC.bin.in";
         } else if (lightNucleusOption == 3) {
             fileName = "C12_alphaCluster.bin.in";
+        } else if (lightNucleusOption == 4) {
+            fileName = "coords_12C_NCSM_aligned.bin";
+        } else if (lightNucleusOption == 5) {
+            fileName = "coords_12C_NCSM_mixed.bin";
         }
     } else if (nucleusA == 16) {
         if (lightNucleusOption == 2) {
