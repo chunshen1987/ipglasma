@@ -1,6 +1,6 @@
 #include "Random.h"
 #include <cmath>
-#include <boost/math/special_functions/gamma.hpp>
+#include "boost/math/special_functions/gamma.hpp"
 // This file contains the random generator, which is
 
 /*
