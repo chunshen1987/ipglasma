@@ -1,5 +1,6 @@
 #include "Random.h"
-
+#include <cmath>
+#include <boost/math/special_functions/gamma.hpp>
 // This file contains the random generator, which is
 
 /*
@@ -196,6 +197,31 @@ double Random::Gauss(double mean, double width) {
     iset = 0;
     return mean + width * gset;
   }
+}
+
+
+double Random::GammaGamma(double Rp, double omega) {
+  // produces random numbers with distribution
+  // IncompleteGamma/Gamma
+  // if iset=0, generate both random numbers new, else use the unused one from
+  // the previous step. this saves lots of time.
+  double fac, bb, sample_b;
+  double bstep = Rp *10. / 10000;
+  double sum_temp = 0.0;
+  for (auto i=0; i<10000; i++) {
+      bb = i * bstep * 1.0;
+      sum_temp  = sum_temp + (1.-boost::math::gamma_p(1./omega, bb*bb/Rp/Rp/omega)) / tgamma(1./omega);
+  }
+  
+    for (auto i=0; i<10001; i++) {
+      bb = i * bstep * 1.0;
+      fac = genrand64_real3() * sum_temp -  (1.-boost::math::gamma_p(1./omega, bb*bb/Rp/Rp/omega)) / tgamma(1./omega);
+      if (fac < 0.0) {
+          sample_b = bb;
+          break;
+      }
+    }
+    return sample_b;
 }
 
 

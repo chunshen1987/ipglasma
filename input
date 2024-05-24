@@ -12,6 +12,7 @@ SubNucleonParamType  0
 SubNucleonParamSet  -1
 BG  4.3674
 BGq  0.3353
+omega 1.0
 BGqVar  0.0
 dqMin  0.2582
 useSmoothNucleus  0

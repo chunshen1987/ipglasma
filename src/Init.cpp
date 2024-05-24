@@ -702,6 +702,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
                                  vector<double> &z_array,
                                  vector<double> &BGq_array) {
     const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
+    const double omega = param->getomega();
     const double BGqMean = param->getBGq();
     const double BGqVar = param->getBGqVar();
     const double BGq = (
@@ -713,11 +714,17 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
 
     vector<double> r_array(Nq, 0.);
     BGq_array.resize(Nq, BGq);
-    for (int iq = 0; iq < Nq; iq++) {
-        double xq = sqrtBG*random->Gauss();
-        double yq = sqrtBG*random->Gauss();
-        double zq = sqrtBG*random->Gauss();
-        r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
+    if (omega == 1) {
+        for (int iq = 0; iq < Nq; iq++) {
+            double xq = sqrtBG*random->Gauss();
+            double yq = sqrtBG*random->Gauss();
+            double zq = sqrtBG*random->Gauss();
+            r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
+        }
+    } else {
+        for (int iq = 0; iq < Nq; iq++) {
+            r_array[iq] = random->GammaGamma(sqrtBG, omega);
+        }
     }
     std::sort(r_array.begin(), r_array.end());
 

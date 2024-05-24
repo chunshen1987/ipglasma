@@ -100,6 +100,7 @@ private:
               // GeV^(-2)
   double BGq_; // the mean width of the Gaussian describing the shape of
                // a constituent quark in GeV^(-2)
+  double omega_;// The omega for Gamma distribution of hot spot position, omega = 1 means using the Gaussian
   double BGqVar_;  // the variance of the Gaussian width describing the shape
                    // of a constituent quark in GeV^(-4)
   double dq_min_;  // the minimum distance between valence quarks [fm]
@@ -310,6 +311,8 @@ public:
   double getBG() { return BG; }
   void setBGq(double x) { BGq_ = x; }
   double getBGq() { return BGq_; }
+  void setomega(double x) { omega_ = x; }
+  double getomega() { return omega_; }
   void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
   double getBGqVar() { return BGqVar_; }
   void setDqmin(double dq_min) { dq_min_ = dq_min; }
