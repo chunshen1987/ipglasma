@@ -723,7 +723,10 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
         }
     } else {
         for (int iq = 0; iq < Nq; iq++) {
-            r_array[iq] = random->GammaGamma(sqrtBG, omega);
+            double xq = random->GammaGamma(sqrtBG, omega);
+            double yq = random->GammaGamma(sqrtBG, omega);
+            double zq = random->GammaGamma(sqrtBG, omega);
+            r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
         }
     }
     std::sort(r_array.begin(), r_array.end());
