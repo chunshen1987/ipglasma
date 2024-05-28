@@ -210,12 +210,12 @@ double Random::GammaGamma(double Rp, double omega) {
   double sum_temp = 0.0;
   for (auto i=0; i<10000; i++) {
       bb = i * bstep * 1.0;
-      sum_temp  = sum_temp + gsl_sf_gamma_inc(1./omega, bb*bb/Rp/Rp/omega) / gsl_sf_gamma(1./omega) / tgamma(1./omega);
+      sum_temp  = sum_temp + bb * gsl_sf_gamma_inc(1./omega, bb*bb/Rp/Rp/omega) / gsl_sf_gamma(1./omega) / tgamma(1./omega);
   }
     fac = genrand64_real3() * sum_temp;
     for (auto i=0; i<10001; i++) {
       bb = i * bstep * 1.0;
-      fac = fac - gsl_sf_gamma_inc(1./omega, bb*bb/Rp/Rp/omega) / gsl_sf_gamma(1./omega) / tgamma(1./omega);
+      fac = fac - bb * gsl_sf_gamma_inc(1./omega, bb*bb/Rp/Rp/omega) / gsl_sf_gamma(1./omega) / tgamma(1./omega);
       if (fac < 0.0) {
           sample_b = bb;
           break;

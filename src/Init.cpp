@@ -509,7 +509,12 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
   if (param->getDoPol() == 0) {
     rotate_nucleus_3D(random, nucleusA_);
     rotate_nucleus_3D(random, nucleusB_);
+  }
+  if (param->getomega() == 1) {
+    rotate_nucleus_3D(random, nucleusA_);
+    rotate_nucleus_3D(random, nucleusB_);
   } 
+  
   if (param->getDoPol() == -1) { // Do the perpendicular polarization
     for (auto &n_i: nucleusA_) {
         auto y_temp = n_i.y;
@@ -723,10 +728,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
         }
     } else {
         for (int iq = 0; iq < Nq; iq++) {
-            double xq = random->GammaGamma(sqrtBG, omega);
-            double yq = random->GammaGamma(sqrtBG, omega);
-            double zq = random->GammaGamma(sqrtBG, omega);
-            r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
+            r_array[iq] = random->GammaGamma(sqrtBG, omega);
         }
     }
     std::sort(r_array.begin(), r_array.end());
@@ -744,9 +746,15 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
             reject_flag  = 0;
             double phi   = 2.*M_PI*random->genrand64_real2();
             double theta = acos(1. - 2.*random->genrand64_real2());
-            x_i = r_i*sin(theta)*cos(phi);
-            y_i = r_i*sin(theta)*sin(phi);
-            z_i = r_i*cos(theta);
+            if (omega == 1) {
+                x_i = r_i*sin(theta)*cos(phi);
+                y_i = r_i*sin(theta)*sin(phi);
+                z_i = r_i*cos(theta);
+            } else {
+                x_i = r_i*cos(phi);
+                y_i = r_i*sin(phi);
+                z_i = 0.0;
+            }
             for (int j = i - 1; j >= 0; j--) {
                 if ((r_i - r_array[j])*(r_i - r_array[j]) > dq_min_sq) break;
                 double dsq = (  (x_i - x_array[j])*(x_i - x_array[j])
