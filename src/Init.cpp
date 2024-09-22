@@ -506,15 +506,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
   // global rotation of the nucleus
   //rotate_nucleus(random, nucleusA_);
   //rotate_nucleus(random, nucleusB_);
-  if (param->getDoPol() == 0) {
+  if (param->getDoPol() == 0 && param->getomega() == 1) {
     rotate_nucleus_3D(random, nucleusA_);
     rotate_nucleus_3D(random, nucleusB_);
   }
+  /*
   if (param->getomega() == 1) {
     rotate_nucleus_3D(random, nucleusA_);
     rotate_nucleus_3D(random, nucleusB_);
   } 
-  
+  */
   if (param->getDoPol() == -1) { // Do the perpendicular polarization
     for (auto &n_i: nucleusA_) {
         auto y_temp = n_i.y;
