@@ -1183,7 +1183,7 @@ double Glauber::areaTA(double x, double A) {
 double Glauber::readinrVr_for_pol_d(std::vector<double>& rVr_pro_, std::vector<double>& rVr_r_) {
     // read in the rV(r) profile 
     double total_Vr_ = 0.0;
-    std::ifstream file("rVr.in"); 
+    std::ifstream file("tables/rVr.in"); 
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
