@@ -25,6 +25,7 @@
 #include "Random.h"
 #include "Setup.h"
 #include "Spinor.h"
+#include "jimwlk.h"
 #include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
@@ -334,6 +335,7 @@ int main(int argc, char *argv[]) {
 
         // allocate lattice
         Lattice lat(param, param->getNc(), param->getSize());
+        JIMWLK jimwlkSolver(*param, &group, &lat, random);
         messager.info("Lattice generated.");
 
         while (param->getSuccess() == 0) {
