@@ -40,6 +40,7 @@ class JIMWLK {
 
     bool initializeKandS();
     double getMassRegulator(const double x, const double y) const;
+    double getAlphas(const double x, const double y) const;
 };
 
 #endif  // SRC_JIMWLK_H_
