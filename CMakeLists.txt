@@ -4,8 +4,8 @@ project(IPGlasma VERSION 1.0 LANGUAGES CXX)
 set(libname "ipglasma_lib")
 set(exename "ipglasma")
 
-# require C++11
-set(CMAKE_CXX_STANDARD 11)
+# require C++17
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

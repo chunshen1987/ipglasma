@@ -212,6 +212,8 @@ class Parameters {
 
     bool computeGluonMultiplicity_;  // flag to compute gluonMultiplicity
 
+    bool simpleLangevin_;
+
   public:
     // constructor:
     Parameters() {};
@@ -485,6 +487,15 @@ class Parameters {
     bool getComputeGluonMultiplicity() const {
         return computeGluonMultiplicity_;
     }
+
+    void setSimpleLangevin(int x) {
+        if (x == 0) {
+            simpleLangevin_ = false;
+        } else {
+            simpleLangevin_ = x;
+        }
+    }
+    bool getSimpleLangevin() const { return simpleLangevin_; }
 
     void loadPosteriorParameterSetsFromFile(
         std::string posteriorFileName,
