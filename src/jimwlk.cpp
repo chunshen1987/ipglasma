@@ -6,15 +6,15 @@
 #include <vector>
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
-    : param_(param) {
+    : param_(param),
+      Nc_(param.getNc()),
+      Nc2m1_(param.getNc() * param.getNc() - 1),
+      Ngrid_(param.getSize()),
+      Ncells_(param.getSize() * param.getSize()) {
     nn_[0] = param_.getSize();
     nn_[1] = param_.getSize();
-    Ngrid_ = param_.getSize();
 
     fft_ptr_ = std::make_shared<FFT>(nn_);
-
-    Nc2m1_ = param_.getNc() * param_.getNc() - 1;
-    Ncells_ = param_.getSize() * param_.getSize();
 
     group_ptr_ = group;
     random_ptr_ = random;
@@ -128,6 +128,10 @@ void JIMWLK::initializeKandS() {
                     2.)
                 / Ngrid_ / Ngrid_ * mass_regulator);
         }
+    }
+    fft_ptr_->fftnVector(K_, K_, nn_, 1);
+    if (param_.getSimpleLangevin()) {
+        fft_ptr_->fftnVector(S_, S_, nn_, 1);
     }
 }
 

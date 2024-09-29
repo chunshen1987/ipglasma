@@ -19,9 +19,10 @@ class JIMWLK {
 
     const double fmgev = 5.068;
 
-    int Ngrid_;
-    int Nc2m1_;
-    int Ncells_;
+    const int Nc_;
+    const int Nc2m1_;
+    const int Ngrid_;
+    const int Ncells_;
 
     Group *group_ptr_;
     Random *random_ptr_;
