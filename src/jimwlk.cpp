@@ -27,19 +27,27 @@ JIMWLK::~JIMWLK() {
     if (initializedKandS_) {
         for (int i = 0; i < Ncells_; i++) {
             delete K_[i];
-            delete S_[i];
         }
         delete[] K_;
-        delete[] S_;
+        if (param_.getSimpleLangevin() == false) {
+            for (int i = 0; i < Ncells_; i++) {
+                delete S_[i];
+            }
+            delete[] S_;
+        }
     }
 }
 
 bool JIMWLK::initializeKandS() {
     K_ = new std::vector<std::complex<double> > *[Ncells_];
-    S_ = new std::vector<std::complex<double> > *[Ncells_];
     for (int i = 0; i < Ncells_; i++) {
         K_[i] = new std::vector<std::complex<double> >;
-        S_[i] = new std::vector<std::complex<double> >;
+    }
+    if (param_.getSimpleLangevin() == false) {
+        S_ = new std::vector<std::complex<double> > *[Ncells_];
+        for (int i = 0; i < Ncells_; i++) {
+            S_[i] = new std::vector<std::complex<double> >;
+        }
     }
 
     double mu0 = param_.getMu0();
@@ -69,9 +77,9 @@ bool JIMWLK::initializeKandS() {
         double sin_x = sin(M_PI * x) / M_PI;
         double sin_y = sin(M_PI * y) / M_PI;
         double denom = sin_x * sin_x + sin_y * sin_y;
-        double fractor = alphas_sqroot * mass_regulator / Ngrid_ / denom;
-        tmpk1 *= fractor;
-        tmpk2 *= fractor;
+        double factor = alphas_sqroot * mass_regulator / Ngrid_ / denom;
+        tmpk1 *= factor;
+        tmpk2 *= factor;
 
         K_[pos]->push_back(tmpk1);
         K_[pos]->push_back(tmpk2);
@@ -81,11 +89,11 @@ bool JIMWLK::initializeKandS() {
                      * pow(sin(2. * M_PI * x) / (2. * M_PI), 2.)
                  + pow(cos(M_PI * x), 2.)
                        * pow(sin(2. * M_PI * y) / (2. * M_PI), 2.))
-                * fractor * fractor);
+                * factor * factor);
         }
     }
     fft_ptr_->fftnVector(K_, K_, nn_, 1);
-    if (param_.getSimpleLangevin()) {
+    if (param_.getSimpleLangevin() == false) {
         fft_ptr_->fftnVector(S_, S_, nn_, 1);
     }
     return true;
@@ -125,20 +133,18 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     const double c = 0.2;
     const int Nf = 3;
     const double length = param_.getL();
+    const double mu0 = param_.getMu0();
+    const double Lambda2 = param_.getLambdaQCD() * param_.getLambdaQCD();
     double phys_x = x * length;  // in fm
     double phys_y = y * length;
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
 
     // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
-    alphas =
-        4. * M_PI
-        / ((11.0 * Nc_ - 2.0 * Nf) / 3.
-           * log(pow(
-               (pow(param_.getMu0() * param_.getMu0() / param_.getLambdaQCD(),
-                    1. / c)
-                + pow(
-                    4. / (phys_r2 * param_.getLambdaQCD() * fmgev * fmgev),
-                    1. / c)),
-               c)));
+    alphas = 4. * M_PI
+             / ((11. * Nc_ - 2. * Nf) / 3.
+                * log(pow(
+                    (pow(mu0 * mu0 / Lambda2, 1. / c)
+                     + pow(4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c)),
+                    c)));
     return alphas;
 }
