@@ -17,6 +17,8 @@ class JIMWLK {
     std::shared_ptr<FFT> fft_ptr_;
     int nn_[2];
 
+    const double fmgev = 5.068;
+
     int Ngrid_;
     int Nc2m1_;
     int Ncells_;

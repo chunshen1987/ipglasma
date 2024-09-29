@@ -40,6 +40,9 @@ void JIMWLK::initializeKandS() {
         S_[i] = new std::vector<std::complex<double> >;
     }
 
+    double mu0 = param_.getMu0();
+    double Lambda2 = param_.getLambdaQCD() * param_.getLambdaQCD();
+
     for (int pos = 0; pos < Ncells_; pos++) {
         double x = pos / Ngrid_ - static_cast<double>(Ngrid_) / 2.;
         double y = pos % Ngrid_ - static_cast<double>(Ngrid_) / 2.;
@@ -53,6 +56,78 @@ void JIMWLK::initializeKandS() {
             continue;
         }
         double mass_regulator = getMassRegulator(x, y);
+        x /= Ngrid_;
+        y /= Ngrid_;
+        if (param_.getRunningCoupling() == 0) {
+            // discretization without singularities
+            double tmpk1 = cos(M_PI * y) * (sin(2. * M_PI * x) / (2. * M_PI))
+                           / ((pow(sin(M_PI * x) / M_PI, 2.)
+                               + pow(sin(M_PI * y) / M_PI, 2.)))
+                           / Ngrid_;
+            double tmpk2 = cos(M_PI * x) * (sin(2. * M_PI * y) / (2. * M_PI))
+                           / ((pow(sin(M_PI * x) / M_PI, 2.)
+                               + pow(sin(M_PI * y) / M_PI, 2.)))
+                           / Ngrid_;
+
+            // Regulate long distance tails, does nothing if m=0
+            tmpk1 *= mass_regulator;
+            tmpk2 *= mass_regulator;
+
+            K_[pos]->push_back(tmpk1);
+            K_[pos]->push_back(tmpk2);
+            S_[pos]->push_back(
+                (pow(cos(M_PI * y), 2.)
+                     * pow(sin(2. * M_PI * x) / (2. * M_PI), 2.)
+                 + pow(cos(M_PI * x), 2.)
+                       * pow(sin(2. * M_PI * y) / (2. * M_PI), 2.))
+                / pow(
+                    (pow(sin(M_PI * x) / M_PI, 2.)
+                     + pow(sin(M_PI * y) / M_PI, 2.)),
+                    2.)
+                / Ngrid_ / Ngrid_ * mass_regulator * mass_regulator);
+        } else {
+            double c = 0.2;
+            double length = param_.getL();
+            double phys_x = x / Ngrid_ * length;  // in fm
+            double phys_y = y / Ngrid_ * length;
+            double phys_r2 = phys_x * phys_x + phys_y * phys_y;
+            int Nf = 3;
+
+            // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
+            double alphas =
+                4. * M_PI
+                / ((11.0 * param_.getNc() - 2.0 * Nf) / 3.
+                   * log(pow(
+                       (pow(mu0 * mu0 / Lambda2, 1. / c)
+                        + pow(
+                            4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c)),
+                       c)));
+
+            // discretization without singularities
+            K_[pos]->push_back(
+                sqrt(alphas)
+                * (cos(M_PI * y) * (sin(2. * M_PI * x) / (2. * M_PI))
+                   / ((pow(sin(M_PI * x) / M_PI, 2.)
+                       + pow(sin(M_PI * y) / M_PI, 2.))))
+                / Ngrid_ * mass_regulator);
+            K_[pos]->push_back(
+                sqrt(alphas)
+                * (cos(M_PI * x) * (sin(2. * M_PI * y) / (2. * M_PI))
+                   / ((pow(sin(M_PI * x) / M_PI, 2.)
+                       + pow(sin(M_PI * y) / M_PI, 2.))))
+                / Ngrid_ * mass_regulator);
+            S_[pos]->push_back(
+                alphas
+                * (pow(cos(M_PI * y), 2.)
+                       * pow(sin(2. * M_PI * x) / (2. * M_PI), 2.)
+                   + pow(cos(M_PI * x), 4.)
+                         * pow(sin(2. * M_PI * y) / (2. * M_PI), 2.))
+                / pow(
+                    (pow(sin(M_PI * x) / M_PI, 2.)
+                     + pow(sin(M_PI * y) / M_PI, 2.)),
+                    2.)
+                / Ngrid_ / Ngrid_ * mass_regulator);
+        }
     }
 }
 
@@ -64,7 +139,6 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     if (m < 1e-16) {
         return mass_regulator;
     }
-    const double fmgev = 5.068;
     double length = param_.getL();
 
     // Lattice units
