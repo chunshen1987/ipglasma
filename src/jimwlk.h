@@ -24,11 +24,13 @@ class JIMWLK {
     const int Ngrid_;
     const int Ncells_;
 
+    // could change to smart pointers later
     Group *group_ptr_;
     Random *random_ptr_;
     Lattice *lat_ptr_;
 
-    std::vector<std::complex<double> > **K_;
+    bool initializedKandS_ = false;
+    std::vector<std::complex<double> > **K_;  // data type matches FFT.h
     std::vector<std::complex<double> > **S_;
 
   public:
@@ -36,7 +38,7 @@ class JIMWLK {
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);
     ~JIMWLK();
 
-    void initializeKandS();
+    bool initializeKandS();
     double getMassRegulator(const double x, const double y) const;
 };
 

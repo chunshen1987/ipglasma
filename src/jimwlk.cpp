@@ -20,19 +20,21 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     random_ptr_ = random;
     lat_ptr_ = lat;
 
-    initializeKandS();
+    initializedKandS_ = initializeKandS();
 }
 
 JIMWLK::~JIMWLK() {
-    for (int i = 0; i < Ncells_; i++) {
-        delete K_[i];
-        delete S_[i];
+    if (initializedKandS_) {
+        for (int i = 0; i < Ncells_; i++) {
+            delete K_[i];
+            delete S_[i];
+        }
+        delete[] K_;
+        delete[] S_;
     }
-    delete[] K_;
-    delete[] S_;
 }
 
-void JIMWLK::initializeKandS() {
+bool JIMWLK::initializeKandS() {
     K_ = new std::vector<std::complex<double> > *[Ncells_];
     S_ = new std::vector<std::complex<double> > *[Ncells_];
     for (int i = 0; i < Ncells_; i++) {
@@ -133,6 +135,7 @@ void JIMWLK::initializeKandS() {
     if (param_.getSimpleLangevin()) {
         fft_ptr_->fftnVector(S_, S_, nn_, 1);
     }
+    return true;
 }
 
 double JIMWLK::getMassRegulator(const double x, const double y) const {
