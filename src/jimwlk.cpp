@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <complex>
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -20,7 +21,7 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     random_ptr_ = random;
     lat_ptr_ = lat;
 
-    initializedKandS_ = initializeKandS();
+    initializeKandS();
 }
 
 JIMWLK::~JIMWLK() {
@@ -36,9 +37,21 @@ JIMWLK::~JIMWLK() {
             delete[] S_;
         }
     }
+
+    if (initializedNoise_) {
+        for (int i = 0; i < Ncells_; i++) {
+            delete xi_[i];
+            delete xi2_[i];
+        }
+        delete[] xi_;
+        delete[] xi2_;
+    }
 }
 
-bool JIMWLK::initializeKandS() {
+void JIMWLK::initializeKandS() {
+    if (initializedKandS_) {
+        return;
+    }
     K_ = new std::vector<std::complex<double> > *[Ncells_];
     for (int i = 0; i < Ncells_; i++) {
         K_[i] = new std::vector<std::complex<double> >;
@@ -96,7 +109,7 @@ bool JIMWLK::initializeKandS() {
     if (param_.getSimpleLangevin() == false) {
         fft_ptr_->fftnVector(S_, S_, nn_, 1);
     }
-    return true;
+    initializedKandS_ = true;
 }
 
 double JIMWLK::getMassRegulator(const double x, const double y) const {
@@ -147,4 +160,40 @@ double JIMWLK::getAlphas(const double x, const double y) const {
                      + pow(4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c)),
                     c)));
     return alphas;
+}
+
+void JIMWLK::initializeNoise() {
+    if (initializedNoise_) {
+        return;
+    }
+    xi_ = new std::complex<double> *[Ncells_];
+    xi2_ = new std::complex<double> *[Ncells_];
+    for (int i = 0; i < Ncells_; i++) {
+        xi_[i] = new std::complex<double>[2 * Nc2m1_];
+        xi2_[i] = new std::complex<double>[2 * Nc2m1_];
+    }
+    initializedNoise_ = true;
+}
+
+void JIMWLK::evolution() {
+    initializeNoise();
+    const int steps = param_.getSteps();
+    std::cout << "Beginning evolution ..." << std::endl;
+    for (int ids = 0; ids < steps; ids++) {
+        if (ids % 100 == 0) {
+            std::cout << "Step " << ids << std::endl;
+        }
+        evolutionStep();
+    }
+    std::cout << "Done." << std::endl;
+}
+
+void JIMWLK::evolutionStep() {
+    // generate random Gaussian noise in every cell for Nc^2-1 color
+    // components and 2 spatial components x and y
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < Nc2m1_; n++) {
+            xi2_[i][n] = std::complex<double>(random_ptr_->Gauss(), 0.);
+        }
+    }
 }

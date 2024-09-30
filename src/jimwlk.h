@@ -30,17 +30,24 @@ class JIMWLK {
     Lattice *lat_ptr_;
 
     bool initializedKandS_ = false;
+    bool initializedNoise_ = false;
     std::vector<std::complex<double> > **K_;  // data type matches FFT.h
     std::vector<std::complex<double> > **S_;
+    std::complex<double> **xi_;   // noise
+    std::complex<double> **xi2_;  // noise
 
   public:
     JIMWLK() = delete;
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);
     ~JIMWLK();
 
-    bool initializeKandS();
+    void initializeKandS();
     double getMassRegulator(const double x, const double y) const;
     double getAlphas(const double x, const double y) const;
+    void initializeNoise();
+
+    void evolution();
+    void evolutionStep();
 };
 
 #endif  // SRC_JIMWLK_H_
