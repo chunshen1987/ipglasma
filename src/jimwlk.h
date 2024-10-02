@@ -36,6 +36,9 @@ class JIMWLK {
     std::complex<double> **xi_;   // noise
     std::complex<double> **xi2_;  // noise
 
+    Matrix **VxsiVx;
+    Matrix **VxsiVy;
+
   public:
     JIMWLK() = delete;
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);

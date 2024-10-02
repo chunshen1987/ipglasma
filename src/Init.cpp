@@ -3124,7 +3124,7 @@ void Init::recenter_nucleus(std::vector<ReturnValue> &nucleus) {
 
 void Init::assignProtons(std::vector<ReturnValue> &nucleus, const int Z) {
     // randomly assign Z nucleons to be protons inside the nucleus
-    std::random_shuffle(nucleus.begin(), nucleus.end());
+    std::shuffle(nucleus.begin(), nucleus.end(), *random_ptr_->getRanGen());
     for (unsigned int i = 0; i < nucleus.size(); i++) {
         if (static_cast<int>(i) < std::abs(Z)) {
             nucleus.at(i).proton = 1;

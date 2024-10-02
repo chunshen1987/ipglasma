@@ -22,6 +22,15 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     lat_ptr_ = lat;
 
     initializeKandS();
+    initializeNoise();
+    if (param_.getSimpleLangevin()) {
+        VxsiVx = new Matrix *[Ncells_];
+        VxsiVy = new Matrix *[Ncells_];
+        for (int i = 0; i < Ncells_; i++) {
+            VxsiVx[i] = new Matrix(Nc_, 0);
+            VxsiVy[i] = new Matrix(Nc_, 0);
+        }
+    }
 }
 
 JIMWLK::~JIMWLK() {
@@ -45,6 +54,15 @@ JIMWLK::~JIMWLK() {
         }
         delete[] xi_;
         delete[] xi2_;
+    }
+
+    if (param_.getSimpleLangevin()) {
+        for (int i = 0; i < Ncells_; i++) {
+            delete VxsiVx[i];
+            delete VxsiVy[i];
+        }
+        delete[] VxsiVx;
+        delete[] VxsiVy;
     }
 }
 
@@ -154,11 +172,10 @@ double JIMWLK::getAlphas(const double x, const double y) const {
 
     // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
     alphas = 4. * M_PI
-             / ((11. * Nc_ - 2. * Nf) / 3.
-                * log(pow(
+             / ((11. * Nc_ - 2. * Nf) / 3. * c
+                * log(
                     (pow(mu0 * mu0 / Lambda2, 1. / c)
-                     + pow(4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c)),
-                    c)));
+                     + pow(4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c))));
     return alphas;
 }
 
