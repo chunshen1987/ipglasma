@@ -210,6 +210,9 @@ void JIMWLK::evolution() {
 }
 
 void JIMWLK::evolutionStep() {
+    const complex<double> I(0., 1.);
+    const double ds_sqrt = std::sqrt(param_.getDs());
+
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
     for (int i = 0; i < Ncells_; i++) {
@@ -238,5 +241,40 @@ void JIMWLK::evolutionStep() {
     for (int i = 0; i < Ncells_; i++) {
         *VxsiVx_[i] = zero_;
         *VxsiVy_[i] = zero_;
+        for (int a = 0; a < Nc2m1_; a++) {
+            Matrix Uconj = lat_ptr_->cells[i]->getU();
+            Uconj.conjg();
+            *VxsiVx_[i] = (*VxsiVx_[i])
+                          + xi2_[i][a] * lat_ptr_->cells[i]->getU()
+                                * group_ptr_->getT(a) * Uconj;
+            *VxsiVy_[i] = (*VxsiVy_[i])
+                          + xi2_[i][a + Nc2m1_] * lat_ptr_->cells[i]->getU()
+                                * group_ptr_->getT(a) * Uconj;
+        }
+    }
+
+    // FFT V xi V
+    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, 1);
+    fft_ptr_->fftn(VxsiVy_, VxsiVy_, nn_, 1);
+
+    for (int i = 0; i < Ncells_; i++) {
+        *VxsiVx_[i] = (*K_[i])[0] * (*VxsiVx_[i]) + (*K_[i])[1] * (*VxsiVy_[i]);
+    }
+
+    // FFT back
+    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, -1);
+
+    // Evolve Matrix
+    for (int i = 0; i < Ncells_; i++) {
+        Matrix left(Nc_, 0.);
+        left = -I * ds_sqrt * (*VxsiVx_[i]);
+        Matrix right(Nc_, 0.);
+
+        for (int a = 0; a < Nc2m1_; a++) {
+            right = right + real(CKxi_[i][a]) * group_ptr_->getT(a);
+        }
+        right = I * ds_sqrt * right;
+        lat_ptr_->cells[i]->setU(
+            left.expm() * lat_ptr_->cells[i]->getU() * right.expm());
     }
 }
