@@ -33,11 +33,14 @@ class JIMWLK {
     bool initializedNoise_ = false;
     std::vector<std::complex<double> > **K_;  // data type matches FFT.h
     std::vector<std::complex<double> > **S_;
-    std::complex<double> **xi_;   // noise
-    std::complex<double> **xi2_;  // noise
 
-    Matrix **VxsiVx;
-    Matrix **VxsiVy;
+    std::complex<double> **xi_;    // noise
+    std::complex<double> **xi2_;   // noise
+    std::complex<double> **CKxi_;  // noise
+
+    Matrix **VxsiVx_;
+    Matrix **VxsiVy_;
+    Matrix zero_ = Matrix(Nc_, 0);
 
   public:
     JIMWLK() = delete;

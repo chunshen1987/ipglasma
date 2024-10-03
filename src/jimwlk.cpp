@@ -24,11 +24,11 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     initializeKandS();
     initializeNoise();
     if (param_.getSimpleLangevin()) {
-        VxsiVx = new Matrix *[Ncells_];
-        VxsiVy = new Matrix *[Ncells_];
+        VxsiVx_ = new Matrix *[Ncells_];
+        VxsiVy_ = new Matrix *[Ncells_];
         for (int i = 0; i < Ncells_; i++) {
-            VxsiVx[i] = new Matrix(Nc_, 0);
-            VxsiVy[i] = new Matrix(Nc_, 0);
+            VxsiVx_[i] = new Matrix(Nc_, 0);
+            VxsiVy_[i] = new Matrix(Nc_, 0);
         }
     }
 }
@@ -51,18 +51,20 @@ JIMWLK::~JIMWLK() {
         for (int i = 0; i < Ncells_; i++) {
             delete xi_[i];
             delete xi2_[i];
+            delete CKxi_[i];
         }
         delete[] xi_;
         delete[] xi2_;
+        delete[] CKxi_;
     }
 
     if (param_.getSimpleLangevin()) {
         for (int i = 0; i < Ncells_; i++) {
-            delete VxsiVx[i];
-            delete VxsiVy[i];
+            delete VxsiVx_[i];
+            delete VxsiVy_[i];
         }
-        delete[] VxsiVx;
-        delete[] VxsiVy;
+        delete[] VxsiVx_;
+        delete[] VxsiVy_;
     }
 }
 
@@ -185,9 +187,11 @@ void JIMWLK::initializeNoise() {
     }
     xi_ = new std::complex<double> *[Ncells_];
     xi2_ = new std::complex<double> *[Ncells_];
+    CKxi_ = new std::complex<double> *[Ncells_];
     for (int i = 0; i < Ncells_; i++) {
         xi_[i] = new std::complex<double>[2 * Nc2m1_];
         xi2_[i] = new std::complex<double>[2 * Nc2m1_];
+        CKxi_[i] = new std::complex<double>[Nc2m1_];
     }
     initializedNoise_ = true;
 }
@@ -209,8 +213,30 @@ void JIMWLK::evolutionStep() {
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
     for (int i = 0; i < Ncells_; i++) {
-        for (int n = 0; n < Nc2m1_; n++) {
+        for (int n = 0; n < 2 * Nc2m1_; n++) {
             xi2_[i][n] = std::complex<double>(random_ptr_->Gauss(), 0.);
         }
+    }
+
+    // the local xi now contains the Fourier transform of xi,
+    // while the original xi is stored in the array xi2
+    fft_ptr_->fftnArray(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
+
+    // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
+    //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < Nc2m1_; n++) {
+            CKxi_[i][n] = (*K_[i]).at(0) * xi_[i][n]
+                          + (*K_[i]).at(1) * xi_[i][n + Nc2m1_];
+            // product of x components + product of y components
+        }
+    }
+
+    // now CKxi contains C(K_i,xi_i^a) - it is a vector with a components
+    fft_ptr_->fftnArray(CKxi_, CKxi_, nn_, -1, Nc2m1_);
+
+    for (int i = 0; i < Ncells_; i++) {
+        *VxsiVx_[i] = zero_;
+        *VxsiVy_[i] = zero_;
     }
 }
