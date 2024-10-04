@@ -1,5 +1,8 @@
 #include "jimwlk.h"
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_sf_bessel.h>
+
 #include <cmath>
 #include <complex>
 #include <iostream>
@@ -152,8 +155,16 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     double a = length / Ngrid_;
     double lat_m = m * a * fmgev;
     double bessel_argument = lat_m * lat_r;
-    double bes = std::cyl_bessel_k(1, bessel_argument);
-    mass_regulator = bessel_argument * bes;
+    // double bes = std::cyl_bessel_k(1, bessel_argument);
+    // use gsl bessel function to be compatible with the AppleClang compiler
+    gsl_sf_result bes;
+    gsl_set_error_handler_off();  // so that when we have too large
+    int status = gsl_sf_bessel_K1_e(bessel_argument, &bes);
+    if (status != GSL_SUCCESS) {
+        mass_regulator = 0.0;
+    } else {
+        mass_regulator = bessel_argument * bes.val;
+    }
     return mass_regulator;
 }
 
