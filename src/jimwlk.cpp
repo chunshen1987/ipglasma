@@ -24,7 +24,7 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     random_ptr_ = random;
     lat_ptr_ = lat;
 
-    initializeKandS();
+    initializeK();
     initializeNoise();
     if (param_.getSimpleLangevin()) {
         VxsiVx_ = new Matrix *[Ncells_];
@@ -37,17 +37,11 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
 }
 
 JIMWLK::~JIMWLK() {
-    if (initializedKandS_) {
+    if (initializedK_) {
         for (int i = 0; i < Ncells_; i++) {
             delete K_[i];
         }
         delete[] K_;
-        if (param_.getSimpleLangevin() == false) {
-            for (int i = 0; i < Ncells_; i++) {
-                delete S_[i];
-            }
-            delete[] S_;
-        }
     }
 
     if (initializedNoise_) {
@@ -71,19 +65,13 @@ JIMWLK::~JIMWLK() {
     }
 }
 
-void JIMWLK::initializeKandS() {
-    if (initializedKandS_) {
+void JIMWLK::initializeK() {
+    if (initializedK_) {
         return;
     }
     K_ = new std::vector<std::complex<double> > *[Ncells_];
     for (int i = 0; i < Ncells_; i++) {
         K_[i] = new std::vector<std::complex<double> >;
-    }
-    if (param_.getSimpleLangevin() == false) {
-        S_ = new std::vector<std::complex<double> > *[Ncells_];
-        for (int i = 0; i < Ncells_; i++) {
-            S_[i] = new std::vector<std::complex<double> >;
-        }
     }
 
     double mu0 = param_.getMu0();
@@ -98,9 +86,6 @@ void JIMWLK::initializeKandS() {
         if (r2 < 1e-16) {
             K_[pos]->push_back(0.);
             K_[pos]->push_back(0.);
-            if (param_.getSimpleLangevin() == false) {
-                S_[pos]->push_back(0.);
-            }
             continue;
         }
         double mass_regulator = getMassRegulator(x, y);
@@ -119,20 +104,9 @@ void JIMWLK::initializeKandS() {
 
         K_[pos]->push_back(tmpk1);
         K_[pos]->push_back(tmpk2);
-        if (param_.getSimpleLangevin() == false) {
-            S_[pos]->push_back(
-                (pow(cos(M_PI * y), 2.)
-                     * pow(sin(2. * M_PI * x) / (2. * M_PI), 2.)
-                 + pow(cos(M_PI * x), 2.)
-                       * pow(sin(2. * M_PI * y) / (2. * M_PI), 2.))
-                * factor * factor);
-        }
     }
     fft_ptr_->fftnVector(K_, K_, nn_, 1);
-    if (param_.getSimpleLangevin() == false) {
-        fft_ptr_->fftnVector(S_, S_, nn_, 1);
-    }
-    initializedKandS_ = true;
+    initializedK_ = true;
 }
 
 double JIMWLK::getMassRegulator(const double x, const double y) const {
