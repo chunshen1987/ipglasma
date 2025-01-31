@@ -64,6 +64,7 @@ class Init {
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
         Glauber *glauber, Initialization_method init_method);
+    void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
     void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);

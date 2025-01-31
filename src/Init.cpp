@@ -2463,9 +2463,55 @@ void Init::init(
         }
 
         while (param->getSuccess() == 0) {
-            // Compute Npart, Ncoll,etc, and check if there was a collision
+            // sample collision impact parameter
+            // and compute Npart, Ncoll,etc, and check if there was a collision
             sampleImpactParameter(param);
             computeCollisionGeometryQuantities(lat, param);
+        }
+    }
+}
+
+void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
+    messager.info("Shifting fields with impact parameter...");
+    const double b = param->getb();
+    const double phiRP = param->getPhiRP();
+    messager << "b = " << b << " fm, phi_RP = " << phiRP;
+    messager.flush("info");
+
+    const int N = param->getSize();
+    Lattice lat_old(param, param->getNc(), param->getSize());
+    for (int ipos = 0; ipos < N * N; ipos++) {
+        lat_old.cells[ipos]->setU(lat->cells[ipos]->getU());
+        lat_old.cells[ipos]->setU2(lat->cells[ipos]->getU2());
+        lat->cells[ipos]->setU(one_);
+        lat->cells[ipos]->setU2(one_);
+    }
+
+    const double L = param->getL();
+    const double a = L / N;  // lattice spacing in fm
+    for (int ipos = 0; ipos < N * N; ipos++) {
+        int ix = ipos / N;
+        int iy = ipos % N;
+        double x = -L / 2. + a * ix;
+        double y = -L / 2. + a * iy;
+
+        double xA = x - b / 2. * cos(phiRP);
+        double yA = y - b / 2. * sin(phiRP);
+        double xB = x + b / 2. * cos(phiRP);
+        double yB = y + b / 2. * sin(phiRP);
+
+        int ixA = static_cast<int>((xA + L / 2.) / a);
+        int iyA = static_cast<int>((yA + L / 2.) / a);
+        int ixB = static_cast<int>((xB + L / 2.) / a);
+        int iyB = static_cast<int>((yB + L / 2.) / a);
+
+        int posA = ixA * N + iyA;
+        if (posA > 0 && posA < N * N) {
+            lat->cells[ipos]->setU(lat_old.cells[posA]->getU());
+        }
+        int posB = ixB * N + iyB;
+        if (posB > 0 && posB < N * N) {
+            lat->cells[ipos]->setU2(lat_old.cells[posB]->getU2());
         }
     }
 }

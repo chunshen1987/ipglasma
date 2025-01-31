@@ -358,12 +358,9 @@ int main(int argc, char *argv[]) {
 
             if (param->getWriteInitialWilsonLines())
                 init.WriteInitialWilsonLines("evolved_", &lat, param);
-            // second stage in the JIMWLK evolution setup
-            init.init(
-                &lat, &group, param, random, &glauber, INITIALIZE_AFTER_JIMWLK);
-            messager.info("2nd stage initialization after JIMWLK done");
         }
 
+        init.shiftFieldsWithImpactParameter(&lat, param);
         init.initializeForwardLightCone(&lat, param);
         messager.info("Start CYM evolution");
         // do the CYM evolution of the initialized fields using parmeters in
