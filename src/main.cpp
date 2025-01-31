@@ -354,6 +354,7 @@ int main(int argc, char *argv[]) {
         if (param->getUseJIMWLK()) {
             messager.info("Start JIMWLK");
             JIMWLK jimwlkSolver(*param, &group, &lat, random);
+            jimwlkSolver.evolution();
             messager.info("Finish JIMWLK");
 
             if (param->getWriteInitialWilsonLines())
@@ -361,6 +362,7 @@ int main(int argc, char *argv[]) {
         }
 
         init.shiftFieldsWithImpactParameter(&lat, param);
+        // init.WriteInitialWilsonLines("Shifted_", &lat, param);
         init.initializeForwardLightCone(&lat, param);
         messager.info("Start CYM evolution");
         // do the CYM evolution of the initialized fields using parmeters in

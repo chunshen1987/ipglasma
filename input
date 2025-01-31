@@ -60,7 +60,7 @@ seed 13
 useTimeForSeed 1
 Projectile Pb
 Target Pb
-bmin 15
+bmin 0
 bmax 20
 computeGluonMultiplicity 0
 rotateReactionPlane 1
@@ -79,9 +79,9 @@ detaOutput 0
 writeOutputs 1
 writeEvolution 0
 readInitialWilsonLines 0
-writeInitialWilsonLines 0
+writeInitialWilsonLines 1 
 writeOutputsToHDF5 0
-useJIMWLK 0
+useJIMWLK 1
 mu0_jimwlk 0.28
 simpleLangevin 1
 alphas_jimwlk 0

@@ -34,7 +34,6 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
             VxsiVy_[i] = new Matrix(Nc_, 0);
         }
     }
-    evolution();
 }
 
 JIMWLK::~JIMWLK() {
@@ -215,7 +214,8 @@ void JIMWLK::evolution() {
     std::cout << "Evolving projectile, evolution steps " << steps_1
               << std::endl;
     for (int ids = 0; ids < steps_1; ids++) {
-        if (ids % 50 == 0) {
+        int printSteps = steps_1 / 10;
+        if (ids % printSteps == 0) {
             std::cout << "Step " << ids << std::endl;
         }
         evolutionStep();
@@ -224,7 +224,8 @@ void JIMWLK::evolution() {
 
     std::cout << "Evolving target, evolution steps " << steps_2 << std::endl;
     for (int ids = 0; ids < steps_2; ids++) {
-        if (ids % 50 == 0) {
+        int printSteps = steps_2 / 10;
+        if (ids % printSteps == 0) {
             std::cout << "Step " << ids << std::endl;
         }
         evolutionStep2();
