@@ -64,6 +64,8 @@ class Init {
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
         Glauber *glauber, Initialization_method init_method);
+    void initializeForwardLightCone(Lattice *lat, Parameters *param);
+    void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
     void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);

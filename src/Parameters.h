@@ -164,7 +164,7 @@ class Parameters {
     int useFixedNpart;  // if 0 do not demand a given N_part, if >1 sample the
                         // initial configuration until the given N_part is
                         // reached
-    double rnp;         // distance between proton and neutron in the transverse
+    double rnp = 0.;    // distance between proton and neutron in the transverse
                         // projection of the deuteron
     int smearQs;  // decide whether to smear Q_s using a Poisson distribution
                   // around its mean at every x_T (1) or not (0)

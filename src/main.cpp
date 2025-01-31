@@ -335,8 +335,6 @@ int main(int argc, char *argv[]) {
 
         // allocate lattice
         Lattice lat(param, param->getNc(), param->getSize());
-        // JIMWLK jimwlkSolver(*param, &group, &lat, random);// passing the
-        // wilson line from Init.cpp to JIMWLK U2, Ux, Uy... Note, wenbin
         messager.info("Lattice generated.");
 
         while (param->getSuccess() == 0) {
@@ -355,9 +353,8 @@ int main(int argc, char *argv[]) {
                                   ? READ_WLINE_TEXT
                                   : READ_WLINE_BINARY;
             }
-            init.init(
-                &lat, &group, param, random, &glauber,
-                init_method);  // First generate the V
+            // First generate the V
+            init.init(&lat, &group, param, random, &glauber, init_method);
             messager.info("Generate V done.");
 
             if (param->getSuccess() == 0) {
@@ -371,18 +368,14 @@ int main(int argc, char *argv[]) {
 
                 if (param->getWriteInitialWilsonLines())
                     init.WriteInitialWilsonLines("evolved_", &lat, param);
+                // second stage in the JIMWLK evolution setup
+                init.init(
+                    &lat, &group, param, random, &glauber,
+                    INITIALIZE_AFTER_JIMWLK);
+                messager.info("2nd stage initialization after JIMWLK done");
             }
-            init.init(
-                &lat, &group, param, random, &glauber,
-                INITIALIZE_AFTER_JIMWLK);  // Note: negative value for the last
-                                           // parameter (READFROMFILE)
-                                           // corresponds to
-            // 2nd stage in the JIMWLK evolution setup
-            // This is necessary also if the JIMWLK evolution is not done, as
-            // only at this point one shifts the nuclei based on the sampled
-            // impact parameter
-            messager.info("2nd stage initialization after JIMWLK done");
 
+            init.initializeForwardLightCone(&lat, param);
             messager.info("Start CYM evolution");
             // do the CYM evolution of the initialized fields using parmeters in
             // param

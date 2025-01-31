@@ -765,7 +765,7 @@ void Init::setColorChargeDensity(
     // if (param->getNucleonPositionsFromFile() == 2) {
     //  A1 = param->getA1FromFile();
     //  A2 = param->getA2FromFile();
-    //} else {
+    //} else e
     //  A1 = static_cast<int>(glauber->nucleusA1()) *
     //  param->getAverageOverNuclei(); A2 =
     //  static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
@@ -784,9 +784,9 @@ void Init::setColorChargeDensity(
     double L = param->getL();
     double P, m;
     double rapidity;
-    if (param->getUsePseudoRapidity() == 0)
+    if (param->getUsePseudoRapidity() == 0) {
         rapidity = param->getRapidity();
-    else {
+    } else {
         // when using pseudorapidity as input convert to rapidity here. later
         // include Jacobian in multiplicity and energy
         cout << "Using pseudorapidity " << param->getRapidity() << endl;
@@ -2578,57 +2578,56 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     messager.flush("info");
 }
 
+void Init::sampleImpactParameter(Parameters *param) {
+    const double bmin = param->getbmin();
+    const double bmax = param->getbmax();
+    double b = 0.;
+    double xb = random_ptr_->genrand64_real1();
+    if (param->getUseNucleus() == 0) {
+        // use b=0 fm for the constant g^2 mu case
+        messager << "Setting b=0 for constant color charge density case.";
+        messager.flush("info");
+        b = 0;
+    } else {
+        if (param->getLinearb() == 1) {
+            // use a linear probability distribution for b if we are doing
+            // nuclei
+            messager << "Sampling linearly distributed b between " << bmin
+                     << " and " << bmax << "fm. Found ";
+            b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
+        } else {
+            // use a uniform distribution instead
+            messager << "Sampling uniformly distributed b between " << bmin
+                     << " and " << bmax << "fm. Found ";
+            b = (bmax - bmin) * xb + bmin;
+        }
+    }
+    param->setb(b);
+    messager << "b=" << b << " fm.";
+    messager.flush("info");
+}
+
 void Init::init(
     Lattice *lat, Group *group, Parameters *param, Random *random,
     Glauber *glauber, Initialization_method init_method) {
-    const int maxIterations = 100000;
-    const int N = param->getSize();
     Nc_ = param->getNc();
     Nc2m1_ = Nc_ * Nc_ - 1;
     group_ptr_ = group;
     random_ptr_ = random;
     one_ = Matrix(Nc_, 1.);
-    const double bmin = param->getbmin();
-    const double bmax = param->getbmax();
-    const Matrix zero(Nc_, 0.);
 
     messager.info("Initializing fields ... ");
-    param->setRnp(0.);
 
-    double b = 0.;
-    double xb =
-        random->genrand64_real1();  // uniformly distributed random variable
-
+    sampleImpactParameter(param);
     if (param->getUseNucleus() == 0) {
-        // use b=0 fm for the constant g^2 mu case
         param->setSuccess(1);
-        b = 0.;
-        messager << "Setting b=0 for constant color charge density case.";
-        messager.flush("info");
     } else {
         if (init_method == INITIALIZE_AFTER_JIMWLK) {
             // Use a previously sampled b used in triggering if we are
             // initializing after JIMWLK evolution
             param->setb(param->get_firstb());
-            b = param->get_firstb();
-        } else {
-            if (param->getLinearb() == 1) {
-                // use a linear probability distribution for b if we are doing
-                // nuclei
-                messager << "Sampling linearly distributed b between " << bmin
-                         << " and " << bmax << "fm. Found ";
-                b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
-            } else {
-                // use a uniform distribution instead
-                messager << "Sampling uniformly distributed b between " << bmin
-                         << " and " << bmax << "fm. Found ";
-                b = (bmax - bmin) * xb + bmin;
-            }
         }
-        param->setb(b);
     }
-    messager << "b=" << b << " fm.";
-    messager.flush("info");
 
     // read Q_s^2 from file
     if (param->getUseNucleus() == 1
@@ -2648,23 +2647,21 @@ void Init::init(
     if (init_method == READ_WLINE_BINARY or init_method == READ_WLINE_TEXT) {
         readVFromFile(lat, param, (init_method == READ_WLINE_BINARY) ? 2 : 1);
         param->setSuccess(1);
-    } else if (init_method == INITIALIZE_AFTER_JIMWLK)  // Initialize with
-                                                        // JIWMLK evolved Wilson
-                                                        // lines
-    {
+    } else if (init_method == INITIALIZE_AFTER_JIMWLK) {
+        // Initialize with JIWMLK evolved Wilson lines
         readV2(lat, param, glauber);
         param->setSuccess(1);
-    } else {  // init_method == SAMPLE_COLOR_CHARGES
+    } else {
+        param->setwhich_stage(0);  // The first step of the first stage
+        // init_method == SAMPLE_COLOR_CHARGES
         // to generate your own Wilson lines
         if (param->getUseNucleus() == 1) {
             nucleusA_.clear();
             nucleusB_.clear();
-            sampleTA(
-                param, random, glauber);  // populate the lists nucleusA_ and
-                                          // nucleusB_ with position data of the
+            // populate the lists nucleusA_ and nucleusB_ with position data
+            sampleTA(param, random, glauber);
+            setColorChargeDensity(lat, param, random, glauber);
         }
-
-        param->setwhich_stage(0);  // The first step of the first stage
 
         // for enforcing a specific Npart:
         if (param->getUseNucleus() == 1 && param->getUseFixedNpart() != 0) {
@@ -2674,27 +2671,7 @@ void Init::init(
                          << param->getUseFixedNpart() << endl;
                     nucleusA_.clear();
                     nucleusB_.clear();
-
-                    xb = random->genrand64_real1();  // uniformly distributed
-                                                     // random variable
-
-                    if (param->getLinearb()
-                        == 1)  // use a linear probability distribution
-                               // for b if we are doing nuclei
-                    {
-                        cout << "Sampling linearly distributed b between "
-                             << bmin << " and " << bmax << "fm." << endl;
-                        b = sqrt(
-                            (bmax * bmax - bmin * bmin) * xb + bmin * bmin);
-                    } else  // use a uniform distribution instead
-                    {
-                        cout << "Sampling uniformly distributed b between "
-                             << bmin << " and " << bmax << "fm." << endl;
-                        b = (bmax - bmin) * xb + bmin;
-                    }
-
-                    param->setb(b);
-                    cout << "Using b=" << b << " fm" << endl;
+                    sampleImpactParameter(param);
 
                     // populate the lists nucleusA_ and nucleusB_ with position
                     // data
@@ -2704,8 +2681,7 @@ void Init::init(
                 }
             }
             cout << "Using fixed Npart=" << param->getNpart() << endl;
-        } else
-            setColorChargeDensity(lat, param, random, glauber);
+        }
 
         // Compute Npart, Ncoll,etc, and check if there was a collision
         computeCollisionGeometryQuantities(lat, param, random);
@@ -2724,276 +2700,276 @@ void Init::init(
         // sample color charges and find Wilson lines V_A and V_B
         setV(lat, param, random);
     }
+}
 
-    if (init_method == INITIALIZE_AFTER_JIMWLK) {  // Start CYM evolution on the
-                                                   // second round after JIMWLK
-        messager.info("Finding fields in forward lightcone...");
-        // output Wilson lines (used also for the proton plots)
-        double L = param->getL();
-        double a = L / N;  // lattice spacing in fm
-        double x, y;
+void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
+    messager.info("Finding fields in forward lightcone...");
+    // output Wilson lines (used also for the proton plots)
+    double L = param->getL();
+    const int N = param->getSize();
+    const int N2 = N * N;
+    double a = L / N;  // lattice spacing in fm
+    double x, y;
 #pragma omp parallel
-        {
-            Matrix temp2(Nc_, 0.);
-            Matrix Ux(Nc_, 0.);
-            Matrix Uy(Nc_, 0.);
-            Matrix UDx(Nc_, 0.);
-            Matrix UDy(Nc_, 0.);
-            Matrix UDx1(Nc_, 0.);
-            Matrix UDy1(Nc_, 0.);
+    {
+        Matrix temp2(Nc_, 0.);
+        Matrix Ux(Nc_, 0.);
+        Matrix Uy(Nc_, 0.);
+        Matrix UDx(Nc_, 0.);
+        Matrix UDy(Nc_, 0.);
+        Matrix UDx1(Nc_, 0.);
+        Matrix UDy1(Nc_, 0.);
 
-            Matrix Uplaq(Nc_, 0.);
+        Matrix Uplaq(Nc_, 0.);
 
-            Matrix UD2(Nc_, 0.);
-            Matrix UDx2(Nc_, 0.);
-            Matrix UDy2(Nc_, 0.);
+        Matrix UD2(Nc_, 0.);
+        Matrix UDx2(Nc_, 0.);
+        Matrix UDy2(Nc_, 0.);
 
-            Matrix Ux1mUx2(Nc_, 0.);
-            Matrix UDx1mUDx2(Nc_, 0.);
-            Matrix Uy1mUy2(Nc_, 0.);
-            Matrix UDy1mUDy2(Nc_, 0.);
+        Matrix Ux1mUx2(Nc_, 0.);
+        Matrix UDx1mUDx2(Nc_, 0.);
+        Matrix Uy1mUy2(Nc_, 0.);
+        Matrix UDy1mUDy2(Nc_, 0.);
 
-            // compute Ux(3) Uy(3) after the collision
+// compute Ux(3) Uy(3) after the collision
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // loops over all cells
-                auto checkU = lat->cells[pos]->getU().trace();
-                if (checkU != checkU) {
-                    lat->cells[pos]->setU(one_);
-                }
-
-                checkU = lat->cells[pos]->getU2().trace();
-                if (checkU != checkU) {
-                    lat->cells[pos]->setU2(one_);
-                }
+        for (int pos = 0; pos < N2; pos++) {
+            // loops over all cells
+            auto checkU = lat->cells[pos]->getU().trace();
+            if (checkU != checkU) {
+                lat->cells[pos]->setU(one_);
             }
 
-#pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // loops over all cells
-                UDx = lat->cells[lat->pospX[pos]]->getU();
-                UDx.conjg();
-                lat->cells[pos]->setUx1(lat->cells[pos]->getU() * UDx);
-
-                UDy = lat->cells[lat->pospY[pos]]->getU();
-                UDy.conjg();
-                lat->cells[pos]->setUy1(lat->cells[pos]->getU() * UDy);
-
-                UDx = lat->cells[lat->pospX[pos]]->getU2();
-                UDx.conjg();
-                lat->cells[pos]->setUx2(lat->cells[pos]->getU2() * UDx);
-
-                UDy = lat->cells[lat->pospY[pos]]->getU2();
-                UDy.conjg();
-                lat->cells[pos]->setUy2(lat->cells[pos]->getU2() * UDy);
+            checkU = lat->cells[pos]->getU2().trace();
+            if (checkU != checkU) {
+                lat->cells[pos]->setU2(one_);
             }
-            // -----------------------------------------------------------------
-            // from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
+        }
 
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // loops over all cells
-                UDx1 = lat->cells[pos]->getUx1();
-                UDx2 = lat->cells[pos]->getUx2();
-                // bool status = findUInForwardLightconeBjoern(UDx1, UDx2,
-                // temp2);
-                bool status = findUInForwardLightconeChun(UDx1, UDx2, temp2);
-                lat->cells[pos]->setUx(temp2);
-                if (!status) {
-                    cout << "pos x = " << pos / param->getSize()
-                         << " y = " << pos % param->getSize() << endl;
-                }
+        for (int pos = 0; pos < N2; pos++) {
+            // loops over all cells
+            UDx = lat->cells[lat->pospX[pos]]->getU();
+            UDx.conjg();
+            lat->cells[pos]->setUx1(lat->cells[pos]->getU() * UDx);
 
-                UDy1 = lat->cells[pos]->getUy1();
-                UDy2 = lat->cells[pos]->getUy2();
-                // status = findUInForwardLightconeBjoern(UDy1, UDy2, temp2);
-                status = findUInForwardLightconeChun(UDy1, UDy2, temp2);
-                lat->cells[pos]->setUy(temp2);
-                if (!status) {
-                    cout << "pos x = " << pos / param->getSize()
-                         << " y = " << pos % param->getSize() << endl;
-                }
+            UDy = lat->cells[lat->pospY[pos]]->getU();
+            UDy.conjg();
+            lat->cells[pos]->setUy1(lat->cells[pos]->getU() * UDy);
+
+            UDx = lat->cells[lat->pospX[pos]]->getU2();
+            UDx.conjg();
+            lat->cells[pos]->setUx2(lat->cells[pos]->getU2() * UDx);
+
+            UDy = lat->cells[lat->pospY[pos]]->getU2();
+            UDy.conjg();
+            lat->cells[pos]->setUy2(lat->cells[pos]->getU2() * UDy);
+        }
+        // -----------------------------------------------------------------
+        // from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
+
+#pragma omp for
+        for (int pos = 0; pos < N2; pos++) {
+            // loops over all cells
+            UDx1 = lat->cells[pos]->getUx1();
+            UDx2 = lat->cells[pos]->getUx2();
+            // bool status = findUInForwardLightconeBjoern(UDx1, UDx2,
+            // temp2);
+            bool status = findUInForwardLightconeChun(UDx1, UDx2, temp2);
+            lat->cells[pos]->setUx(temp2);
+            if (!status) {
+                cout << "pos x = " << pos / param->getSize()
+                     << " y = " << pos % param->getSize() << endl;
             }
+
+            UDy1 = lat->cells[pos]->getUy1();
+            UDy2 = lat->cells[pos]->getUy2();
+            // status = findUInForwardLightconeBjoern(UDy1, UDy2, temp2);
+            status = findUInForwardLightconeChun(UDy1, UDy2, temp2);
+            lat->cells[pos]->setUy(temp2);
+            if (!status) {
+                cout << "pos x = " << pos / param->getSize()
+                     << " y = " << pos % param->getSize() << endl;
+            }
+        }
 
 // compute initial electric field
 // with minus ax, ay
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // x part in sum:
-                Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-                UDx1 = lat->cells[pos]->getUx1();
-                UDx1.conjg();
-                UDx2 = lat->cells[pos]->getUx2();
-                UDx2.conjg();
-                UDx1mUDx2 = UDx1 - UDx2;
+        for (int pos = 0; pos < N2; pos++) {
+            // x part in sum:
+            Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
+            UDx1 = lat->cells[pos]->getUx1();
+            UDx1.conjg();
+            UDx2 = lat->cells[pos]->getUx2();
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-                Ux = lat->cells[pos]->getUx();
-                UDx = Ux;
-                UDx.conjg();
+            Ux = lat->cells[pos]->getUx();
+            UDx = Ux;
+            UDx.conjg();
 
-                temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
 
-                Ux1mUx2 = lat->cells[lat->posmX[pos]]->getUx1()
-                          - lat->cells[lat->posmX[pos]]->getUx2();
-                UDx1 = lat->cells[lat->posmX[pos]]->getUx1();
-                UDx1.conjg();
-                UDx2 = lat->cells[lat->posmX[pos]]->getUx2();
-                UDx2.conjg();
-                UDx1mUDx2 = UDx1 - UDx2;
+            Ux1mUx2 = lat->cells[lat->posmX[pos]]->getUx1()
+                      - lat->cells[lat->posmX[pos]]->getUx2();
+            UDx1 = lat->cells[lat->posmX[pos]]->getUx1();
+            UDx1.conjg();
+            UDx2 = lat->cells[lat->posmX[pos]]->getUx2();
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-                Ux = lat->cells[lat->posmX[pos]]->getUx();
-                UDx = Ux;
-                UDx.conjg();
+            Ux = lat->cells[lat->posmX[pos]]->getUx();
+            UDx = Ux;
+            UDx.conjg();
 
-                temp2 = temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux
-                        - UDx1mUDx2;
+            temp2 =
+                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
 
-                // y part in sum
-                Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-                UDy1 = lat->cells[pos]->getUy1();
-                UDy1.conjg();
-                UDy2 = lat->cells[pos]->getUy2();
-                UDy2.conjg();
-                UDy1mUDy2 = UDy1 - UDy2;
+            // y part in sum
+            Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
+            UDy1 = lat->cells[pos]->getUy1();
+            UDy1.conjg();
+            UDy2 = lat->cells[pos]->getUy2();
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-                Uy = lat->cells[pos]->getUy();
-                UDy = Uy;
-                UDy.conjg();
+            Uy = lat->cells[pos]->getUy();
+            UDy = Uy;
+            UDy.conjg();
 
-                // y part of the sum:
-                temp2 = temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2
-                        + UDy1mUDy2;
+            // y part of the sum:
+            temp2 =
+                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
 
-                Uy1mUy2 = lat->cells[lat->posmY[pos]]->getUy1()
-                          - lat->cells[lat->posmY[pos]]->getUy2();
-                UDy1 = lat->cells[lat->posmY[pos]]->getUy1();
-                UDy1.conjg();
-                UDy2 = lat->cells[lat->posmY[pos]]->getUy2();
-                UDy2.conjg();
-                UDy1mUDy2 = UDy1 - UDy2;
+            Uy1mUy2 = lat->cells[lat->posmY[pos]]->getUy1()
+                      - lat->cells[lat->posmY[pos]]->getUy2();
+            UDy1 = lat->cells[lat->posmY[pos]]->getUy1();
+            UDy1.conjg();
+            UDy2 = lat->cells[lat->posmY[pos]]->getUy2();
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-                Uy = lat->cells[lat->posmY[pos]]->getUy();
-                UDy = Uy;
-                UDy.conjg();
+            Uy = lat->cells[lat->posmY[pos]]->getUy();
+            UDy = Uy;
+            UDy.conjg();
 
-                temp2 = temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy
-                        - UDy1mUDy2;
+            temp2 =
+                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
 
-                lat->cells[pos]->setE1((1. / 8.) * temp2);
-            }
+            lat->cells[pos]->setE1((1. / 8.) * temp2);
+        }
 
-            // with plus ax, ay
+// with plus ax, ay
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // x part in sum:
-                Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-                UDx1 = lat->cells[pos]->getUx1();
-                UDx1.conjg();
-                UDx2 = lat->cells[pos]->getUx2();
-                UDx2.conjg();
-                UDx1mUDx2 = UDx1 - UDx2;
+        for (int pos = 0; pos < N2; pos++) {
+            // x part in sum:
+            Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
+            UDx1 = lat->cells[pos]->getUx1();
+            UDx1.conjg();
+            UDx2 = lat->cells[pos]->getUx2();
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-                Ux = lat->cells[pos]->getUx();
-                UDx = Ux;
-                UDx.conjg();
+            Ux = lat->cells[pos]->getUx();
+            UDx = Ux;
+            UDx.conjg();
 
-                temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
 
-                Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()
-                          - lat->cells[lat->pospX[pos]]->getUx2();
-                UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
-                UDx1.conjg();
-                UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
-                UDx2.conjg();
-                UDx1mUDx2 = UDx1 - UDx2;
+            Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()
+                      - lat->cells[lat->pospX[pos]]->getUx2();
+            UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
+            UDx1.conjg();
+            UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-                Ux = lat->cells[lat->pospX[pos]]->getUx();
-                UDx = Ux;
-                UDx.conjg();
+            Ux = lat->cells[lat->pospX[pos]]->getUx();
+            UDx = Ux;
+            UDx.conjg();
 
-                temp2 = temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux
-                        - UDx1mUDx2;
+            temp2 =
+                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
 
-                // y part in sum
-                Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-                UDy1 = lat->cells[pos]->getUy1();
-                UDy1.conjg();
-                UDy2 = lat->cells[pos]->getUy2();
-                UDy2.conjg();
-                UDy1mUDy2 = UDy1 - UDy2;
+            // y part in sum
+            Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
+            UDy1 = lat->cells[pos]->getUy1();
+            UDy1.conjg();
+            UDy2 = lat->cells[pos]->getUy2();
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-                Uy = lat->cells[pos]->getUy();
-                UDy = Uy;
-                UDy.conjg();
+            Uy = lat->cells[pos]->getUy();
+            UDy = Uy;
+            UDy.conjg();
 
-                // y part of the sum:
-                temp2 = temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2
-                        + UDy1mUDy2;
+            // y part of the sum:
+            temp2 =
+                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
 
-                Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()
-                          - lat->cells[lat->pospY[pos]]->getUy2();
-                UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
-                UDy1.conjg();
-                UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
-                UDy2.conjg();
-                UDy1mUDy2 = UDy1 - UDy2;
+            Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()
+                      - lat->cells[lat->pospY[pos]]->getUy2();
+            UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
+            UDy1.conjg();
+            UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-                Uy = lat->cells[lat->pospY[pos]]->getUy();
-                UDy = Uy;
-                UDy.conjg();
+            Uy = lat->cells[lat->pospY[pos]]->getUy();
+            UDy = Uy;
+            UDy.conjg();
 
-                temp2 = temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy
-                        - UDy1mUDy2;
+            temp2 =
+                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
 
-                lat->cells[pos]->setE2((1. / 8.) * temp2);
-            }
+            lat->cells[pos]->setE2((1. / 8.) * temp2);
+        }
+
 // compute the plaquette
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                UDx = lat->cells[lat->pospY[pos]]->getUx();
-                UDy = lat->cells[pos]->getUy();
-                UDx.conjg();
-                UDy.conjg();
+        for (int pos = 0; pos < N2; pos++) {
+            UDx = lat->cells[lat->pospY[pos]]->getUx();
+            UDy = lat->cells[pos]->getUy();
+            UDx.conjg();
+            UDy.conjg();
 
-                Uplaq = lat->cells[pos]->getUx()
-                        * (lat->cells[lat->pospX[pos]]->getUy() * (UDx * UDy));
-                lat->cells[pos]->setUplaq(Uplaq);
-            }
-
-#pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                // AM = (lat->cells[pos]->getE1());
-                // //+lat->cells[pos]->getAetaP()); AP =
-                // (lat->cells[pos]->getE2()); //+lat->cells[pos]->getAetaP());
-
-                // this is pi in lattice units as needed for the evolution.
-                // (later, the a^4 gives the right units for the energy density
-                lat->cells[pos]->setpi(
-                    complex<double>(0., -2. / param->getg())
-                    * (lat->cells[pos]->getE1()));
-                // factor -2 because I have A^eta (note the 1/8 before)
-                // but want \pi (E^z).
-
-                // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP));
-                // // factor -2 because I have A^eta (note the 1/8 before) but
-                // want
-                // \pi (E^z).
-            }
+            Uplaq = lat->cells[pos]->getUx()
+                    * (lat->cells[lat->pospX[pos]]->getUy() * (UDx * UDy));
+            lat->cells[pos]->setUplaq(Uplaq);
+        }
 
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                lat->cells[pos]->setE1(zero);
-                lat->cells[pos]->setE2(zero);
-                lat->cells[pos]->setphi(zero);
+        for (int pos = 0; pos < N2; pos++) {
+            // AM = (lat->cells[pos]->getE1());
+            // //+lat->cells[pos]->getAetaP()); AP =
+            // (lat->cells[pos]->getE2()); //+lat->cells[pos]->getAetaP());
 
-                // reset the Ux1 to be used for other purposes later
-                lat->cells[pos]->setUx1(one_);
-            }
-        }  // omp block
-    }  // end INITIALIZE_AFTER_JIMWLK
-    // -----------------------------------------------------------------------------
-    // finish
-    // -----------------------------------------------------------------------------
+            // this is pi in lattice units as needed for the evolution.
+            // (later, the a^4 gives the right units for the energy density
+            lat->cells[pos]->setpi(
+                complex<double>(0., -2. / param->getg())
+                * (lat->cells[pos]->getE1()));
+            // factor -2 because I have A^eta (note the 1/8 before)
+            // but want \pi (E^z).
+
+            // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP));
+            // // factor -2 because I have A^eta (note the 1/8 before) but
+            // want
+            // \pi (E^z).
+        }
+
+        const Matrix zero(Nc_, 0.);
+#pragma omp for
+        for (int pos = 0; pos < N2; pos++) {
+            lat->cells[pos]->setE1(zero);
+            lat->cells[pos]->setE2(zero);
+            lat->cells[pos]->setphi(zero);
+
+            // reset the Ux1 to be used for other purposes later
+            lat->cells[pos]->setUx1(one_);
+        }
+    }  // omp block
 }
 
 void Init::multiplicity(Lattice *lat, Parameters *param) {
