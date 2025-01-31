@@ -1334,13 +1334,16 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         }
 
         Npart = 0;
-
         for (int i = 0; i < A1; i++) {
-            if (nucleusA_.at(i).collided == 1) Npart++;
+            if (nucleusA_.at(i).collided == 1) {
+                Npart++;
+            }
         }
 
         for (int i = 0; i < A2; i++) {
-            if (nucleusB_.at(i).collided == 1) Npart++;
+            if (nucleusB_.at(i).collided == 1) {
+                Npart++;
+            }
         }
 
         param->setNpart(Npart);
@@ -2420,6 +2423,13 @@ void Init::sampleImpactParameter(Parameters *param) {
     param->setPhiRP(phiRP);
     messager << "b = " << b << " fm, phi_RP = " << phiRP;
     messager.flush("info");
+
+    for (unsigned int i = 0; i < nucleusA_.size(); i++) {
+        nucleusA_.at(i).collided = 0;
+    }
+    for (unsigned int i = 0; i < nucleusB_.size(); i++) {
+        nucleusB_.at(i).collided = 0;
+    }
 }
 
 void Init::init(
