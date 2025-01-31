@@ -138,6 +138,7 @@ class Parameters {
     double b;            // impact parameter
     double bmin;         // minimum impact parameter to sample from
     double bmax;         // maximum impact parameter to sample to
+    double phiRP_;       // the reaction plane angle
     int linearb;         // sample b from a linear distribution if 1, uniform
                          // distribution otherwise
     std::string Target;  // target nucleus' name
@@ -292,7 +293,9 @@ class Parameters {
     void setSigmaNN(double x) { SigmaNN = x; }
     double getSigmaNN() { return SigmaNN; }
     void setb(double x) { b = x; }
-    double getb() { return b; }
+    double getb() const { return b; }
+    void setPhiRP(double x) { phiRP_ = x; }
+    double getPhiRP() const { return phiRP_; }
     void setbmin(double x) { bmin = x; }
     double getbmin() { return bmin; }
     void setbmax(double x) { bmax = x; }
