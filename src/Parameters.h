@@ -212,22 +212,24 @@ class Parameters {
 
     bool computeGluonMultiplicity_;  // flag to compute gluonMultiplicity
 
-    bool useJIMWLK; // flag to use JIMWLK evolution
+    bool useJIMWLK;  // flag to use JIMWLK evolution
     bool simpleLangevin_;
     int which_stage;
-    double first_b; // Impact parameter sampled before the JIMWLK evolution is saved here
+    double first_b;  // Impact parameter sampled before the JIMWLK evolution is
+                     // saved here
 
     double jimwlk_alphas;  // 0 = running coupling, positive value = fixed
                            // coupling
     double m_jimwlk;
     double mu0_jimwlk;
     double LambdaQCD_jimwlk;
-    //int steps_jimwlk;
-    //int measureSteps_jimwlk;
+    // int steps_jimwlk;
+    // int measureSteps_jimwlk;
     double ds_jimwlk;
-    double x0_jimwlk; // Bjorken-x at the initial condition of the JIMLWK evolution
+    double x0_jimwlk;  // Bjorken-x at the initial condition of the JIMLWK
+                       // evolution
 
-    double jimwlk_x1; // Bjorken x for the nucleus A (projectile)
+    double jimwlk_x1;  // Bjorken x for the nucleus A (projectile)
     double jimwlk_x2;  // Bjorken x for the nucleus B (target)
 
   public:
@@ -514,7 +516,7 @@ class Parameters {
     void set_firstb(double x) { first_b = x; }
     double get_firstb() { return first_b; }
     int get_added_lines() { return 4; }
-    
+
     // JIMWLK functions
     void setm_jimwlk(double x) { m_jimwlk = x; };
     double getm_jimwlk() { return m_jimwlk; }
@@ -534,8 +536,8 @@ class Parameters {
     double GetJimwlk_x_projectile() { return jimwlk_x1; }
     void SetJimwlk_x_target(double x) { jimwlk_x2 = x; }
     double GetJimwlk_x_target() { return jimwlk_x2; }
-    //void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
-    //int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
+    // void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
+    // int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
     void setDs_jimwlk(double x) { ds_jimwlk = x; }
     double getDs_jimwlk() { return ds_jimwlk; }
     void setJimwlk_alphas(double as) { jimwlk_alphas = as; }
@@ -550,7 +552,5 @@ class Parameters {
             useJIMWLK = true;
         }
     }
-
-    
 };
 #endif  // Parameters_H

@@ -38,8 +38,8 @@ class Init {
 
     double As[1];
 
-    std::vector<vector<float> > nucleonPosArrA_;
-    std::vector<vector<float> > nucleonPosArrB_;
+    std::vector<vector<float>> nucleonPosArrA_;
+    std::vector<vector<float>> nucleonPosArrB_;
 
     // list of x and y coordinates of nucleons in nucleus A
     std::vector<ReturnValue> nucleusA_;
@@ -78,7 +78,8 @@ class Init {
     void readVFromFile(Lattice *lat, Parameters *param, int format);
     void readV2(Lattice *lat, Parameters *param, Glauber *glauber);
 
-    void WriteInitialWilsonLines(std::string output_dir, Lattice *lat, Parameters *param);
+    void WriteInitialWilsonLines(
+        std::string output_dir, Lattice *lat, Parameters *param);
 
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
@@ -90,7 +91,7 @@ class Init {
 
     void readInNucleusConfigs(
         const int nucleusA, const int lightNucleusOption,
-        vector<vector<float> > &nucleonPosArr);
+        vector<vector<float>> &nucleonPosArr);
     void generate_nucleus_configuration(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double gamma, bool force_dmin_flag,

@@ -335,7 +335,8 @@ int main(int argc, char *argv[]) {
 
         // allocate lattice
         Lattice lat(param, param->getNc(), param->getSize());
-        //JIMWLK jimwlkSolver(*param, &group, &lat, random);// passing the wilson line from Init.cpp to JIMWLK U2, Ux, Uy... Note, wenbin
+        // JIMWLK jimwlkSolver(*param, &group, &lat, random);// passing the
+        // wilson line from Init.cpp to JIMWLK U2, Ux, Uy... Note, wenbin
         messager.info("Lattice generated.");
 
         while (param->getSuccess() == 0) {
@@ -606,15 +607,16 @@ int readInput(
     param->setUseJIMWLK(setup->IFind(file_name, "useJIMWLK"));
     param->setSimpleLangevin(setup->IFind(file_name, "simpleLangevin"));
     param->setMu0_jimwlk(setup->DFind(file_name, "mu0_jimwlk"));
-    param->setLambdaQCD_jimwlk(setup->DFind(file_name,"Lambda_QCD_jimwlk")); // in units of g^2mu
-    param->setm_jimwlk(setup->DFind(file_name,"m_jimwlk"));
-    param->setJimwlk_alphas(setup->IFind(file_name,"alphas_jimwlk"));
-    param->setDs_jimwlk(setup->DFind(file_name,"Ds_jimwlk"));
-    param->SetJimwlk_x_projectile(setup->DFind(file_name,"x_projectile_jimwlk"));
-    param->SetJimwlk_x_target(setup->DFind(file_name,"x_target_jimwlk"));
-    param->setJimwlk_x0(setup->DFind(file_name,"jimwlk_ic_x"));
-    
-    
+    param->setLambdaQCD_jimwlk(
+        setup->DFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
+    param->setm_jimwlk(setup->DFind(file_name, "m_jimwlk"));
+    param->setJimwlk_alphas(setup->IFind(file_name, "alphas_jimwlk"));
+    param->setDs_jimwlk(setup->DFind(file_name, "Ds_jimwlk"));
+    param->SetJimwlk_x_projectile(
+        setup->DFind(file_name, "x_projectile_jimwlk"));
+    param->SetJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
+    param->setJimwlk_x0(setup->DFind(file_name, "jimwlk_ic_x"));
+
     if (rank == 0) cout << "done." << endl;
 
     return 0;
