@@ -1220,8 +1220,7 @@ void Init::setColorChargeDensity(
 
 // This function compute the collision geometry quantities, such as
 // Npart, Ncoll, averageQs, etc.
-void Init::computeCollisionGeometryQuantities(
-    Lattice *lat, Parameters *param, Random *random) {
+void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
@@ -1254,10 +1253,10 @@ void Init::computeCollisionGeometryQuantities(
                 for (int j = 0; j < A2; j++) {
                     double dx =
                         (nucleusB_.at(j).x - nucleusA_.at(i).x
-                         + b * cos(phiRP));
+                         - b * cos(phiRP));
                     double dy =
                         (nucleusB_.at(j).y - nucleusA_.at(i).y
-                         + b * sin(phiRP));
+                         - b * sin(phiRP));
                     double dij = dx * dx + dy * dy;
                     if (dij < d2) {
                         foutNcoll
@@ -1280,15 +1279,15 @@ void Init::computeCollisionGeometryQuantities(
                 for (int j = 0; j < A2; j++) {
                     double dx =
                         (nucleusB_.at(j).x - nucleusA_.at(i).x
-                         + b * cos(phiRP));
+                         - b * cos(phiRP));
                     double dy =
                         (nucleusB_.at(j).y - nucleusA_.at(i).y
-                         + b * sin(phiRP));
+                         - b * sin(phiRP));
                     double dij = dx * dx + dy * dy;
 
                     p = G * exp(-G * dij / d2);  // Gaussian profile
 
-                    ran = random->genrand64_real1();
+                    ran = random_ptr_->genrand64_real1();
 
                     if (ran < p) {
                         foutNcoll
@@ -1348,7 +1347,9 @@ void Init::computeCollisionGeometryQuantities(
 
         if (param->getUseFixedNpart() != 0
             && Npart != param->getUseFixedNpart()) {
-            cout << "current Npart = " << Npart << endl;
+            cout << "current Npart = " << Npart
+                 << " != " << param->getUseFixedNpart() << endl;
+            param->setSuccess(0);
             return;
         }
     } else {
@@ -1461,10 +1462,10 @@ void Init::computeCollisionGeometryQuantities(
                          // remember: Tp is in GeV^2
     }
 
-    averageQs /= static_cast<double>(count);
-    averageQs2 /= static_cast<double>(count);
-    averageQs2Avg /= static_cast<double>(count);
-    averageQs2min /= static_cast<double>(count);
+    averageQs /= static_cast<double>(count) + 1e-16;
+    averageQs2 /= static_cast<double>(count) + 1e-16;
+    averageQs2Avg /= static_cast<double>(count) + 1e-16;
+    averageQs2min /= static_cast<double>(count) + 1e-16;
 
     param->setAverageQs(sqrt(averageQs2));
     param->setAverageQsAvg(sqrt(averageQs2Avg));
@@ -1622,7 +1623,7 @@ void Init::computeCollisionGeometryQuantities(
     foutNEst.close();
 }
 
-void Init::setV(Lattice *lat, Parameters *param, Random *random) {
+void Init::setV(Lattice *lat, Parameters *param) {
     messager.info("Setting Wilson lines ...");
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
@@ -1651,7 +1652,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                     param->getg()
                     * sqrt(
                         lat->cells[pos]->getg2mu2A() / static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2muA * random->Gauss();
+                rhoACoeff[n][pos] = g2muA * random_ptr_->Gauss();
             }
         }
 
@@ -1728,7 +1729,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                     param->getg()
                     * sqrt(
                         lat->cells[pos]->getg2mu2B() / static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2muB * random->Gauss();
+                rhoACoeff[n][pos] = g2muB * random_ptr_->Gauss();
             }
         }
 
@@ -2417,7 +2418,7 @@ void Init::sampleImpactParameter(Parameters *param) {
         phiRP = 2 * M_PI * random_ptr_->genrand64_real2();
     }
     param->setPhiRP(phiRP);
-    messager << "b=" << b << " fm, phi_RP =" << phiRP;
+    messager << "b = " << b << " fm, phi_RP = " << phiRP;
     messager.flush("info");
 }
 
@@ -2435,16 +2436,6 @@ void Init::init(
     if (param->getUseNucleus() == 0) {
         param->setSuccess(1);
     } else {
-        if (init_method == INITIALIZE_AFTER_JIMWLK) {
-            // Use a previously sampled b used in triggering if we are
-            // initializing after JIMWLK evolution
-            param->setb(param->get_firstb());
-        }
-    }
-
-    // read Q_s^2 from file
-    if (param->getUseNucleus() == 1
-        and init_method != INITIALIZE_AFTER_JIMWLK) {
         readNuclearQs(param);
     }
 
@@ -2455,18 +2446,11 @@ void Init::init(
         static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
         nucleonPosArrB_);
 
-    // to read Wilson lines from file (e.g. after JIMWLK evolution for the
-    // 3DGlasma)
     if (init_method == READ_WLINE_BINARY or init_method == READ_WLINE_TEXT) {
+        // to read Wilson lines from file
         readVFromFile(lat, param, (init_method == READ_WLINE_BINARY) ? 2 : 1);
         param->setSuccess(1);
-    } else if (init_method == INITIALIZE_AFTER_JIMWLK) {
-        // Initialize with JIWMLK evolved Wilson lines
-        readV2(lat, param, glauber);
-        param->setSuccess(1);
     } else {
-        param->setwhich_stage(0);  // The first step of the first stage
-        // init_method == SAMPLE_COLOR_CHARGES
         // to generate your own Wilson lines
         if (param->getUseNucleus() == 1) {
             nucleusA_.clear();
@@ -2475,13 +2459,13 @@ void Init::init(
             sampleTA(param, random, glauber);
             setColorChargeDensity(lat, param, random, glauber);
             // sample color charges and find Wilson lines V_A and V_B
-            setV(lat, param, random);
+            setV(lat, param);
         }
 
         while (param->getSuccess() == 0) {
             // Compute Npart, Ncoll,etc, and check if there was a collision
             sampleImpactParameter(param);
-            computeCollisionGeometryQuantities(lat, param, random);
+            computeCollisionGeometryQuantities(lat, param);
         }
     }
 }

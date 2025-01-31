@@ -60,7 +60,7 @@ seed 13
 useTimeForSeed 1
 Projectile Pb
 Target Pb
-bmin 0
+bmin 15
 bmax 20
 computeGluonMultiplicity 0
 rotateReactionPlane 1
@@ -72,11 +72,11 @@ gaussianWounding 1
 inverseQsForMaxTime 0
 maxtime 0.4
 dtau 0.1
-LOutput 30
-sizeOutput 512
+LOutput 34
+sizeOutput 340
 etaSizeOutput 1
 detaOutput 0
-writeOutputs 5
+writeOutputs 1
 writeEvolution 0
 readInitialWilsonLines 0
 writeInitialWilsonLines 0

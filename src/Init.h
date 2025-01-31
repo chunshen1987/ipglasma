@@ -74,9 +74,8 @@ class Init {
     double getNuclearQs2(double Qs2atZeroY, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
-    void computeCollisionGeometryQuantities(
-        Lattice *lat, Parameters *param, Random *random);
-    void setV(Lattice *lat, Parameters *param, Random *random);
+    void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
+    void setV(Lattice *lat, Parameters *param);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
     void readV2(Lattice *lat, Parameters *param, Glauber *glauber);
 

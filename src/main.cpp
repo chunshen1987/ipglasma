@@ -337,70 +337,58 @@ int main(int argc, char *argv[]) {
         Lattice lat(param, param->getNc(), param->getSize());
         messager.info("Lattice generated.");
 
-        while (param->getSuccess() == 0) {
-            param->setSuccess(0);
+        param->setSuccess(0);
 
-            // initialize gsl random number generator (used for non-Gaussian
-            // distributions)
-            // random->gslRandomInit(rnum);
-
-            // initialize U-fields on the lattice
-            Initialization_method init_method;
-            if (param->getReadInitialWilsonLines() == 0) {
-                init_method = SAMPLE_COLOR_CHARGES;
-            } else {
-                init_method = (param->getReadInitialWilsonLines() == 1)
-                                  ? READ_WLINE_TEXT
-                                  : READ_WLINE_BINARY;
-            }
-            // First generate the V
-            init.init(&lat, &group, param, random, &glauber, init_method);
-            messager.info("Generate V done.");
-
-            if (param->getSuccess() == 0) {
-                continue;
-            }
-
-            if (param->getUseJIMWLK()) {
-                messager.info("Start JIMWLK");
-                JIMWLK jimwlkSolver(*param, &group, &lat, random);
-                messager.info("Finish JIMWLK");
-
-                if (param->getWriteInitialWilsonLines())
-                    init.WriteInitialWilsonLines("evolved_", &lat, param);
-                // second stage in the JIMWLK evolution setup
-                init.init(
-                    &lat, &group, param, random, &glauber,
-                    INITIALIZE_AFTER_JIMWLK);
-                messager.info("2nd stage initialization after JIMWLK done");
-            }
-
-            init.initializeForwardLightCone(&lat, param);
-            messager.info("Start CYM evolution");
-            // do the CYM evolution of the initialized fields using parmeters in
-            // param
-            evolution.run(&lat, &group, param);
+        // initialize U-fields on the lattice
+        Initialization_method init_method;
+        if (param->getReadInitialWilsonLines() == 0) {
+            init_method = SAMPLE_COLOR_CHARGES;
+        } else {
+            init_method = (param->getReadInitialWilsonLines() == 1)
+                              ? READ_WLINE_TEXT
+                              : READ_WLINE_BINARY;
         }
+        // First generate the V
+        init.init(&lat, &group, param, random, &glauber, init_method);
+
+        if (param->getUseJIMWLK()) {
+            messager.info("Start JIMWLK");
+            JIMWLK jimwlkSolver(*param, &group, &lat, random);
+            messager.info("Finish JIMWLK");
+
+            if (param->getWriteInitialWilsonLines())
+                init.WriteInitialWilsonLines("evolved_", &lat, param);
+            // second stage in the JIMWLK evolution setup
+            init.init(
+                &lat, &group, param, random, &glauber, INITIALIZE_AFTER_JIMWLK);
+            messager.info("2nd stage initialization after JIMWLK done");
+        }
+
+        init.initializeForwardLightCone(&lat, param);
+        messager.info("Start CYM evolution");
+        // do the CYM evolution of the initialized fields using parmeters in
+        // param
+        evolution.run(&lat, &group, param);
+    }
 
 #ifndef DISABLEMPI
-        MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-        messager.info("One event finished");
-        if (param->getWriteOutputsToHDF5() == 1) {
-            int status = 0;
-            stringstream h5output_filename;
-            h5output_filename << "RESULTS_rank" << rank;
-            stringstream collect_command;
-            collect_command << "python3 utilities/combine_events_into_hdf5.py ."
-                            << " --output_filename " << h5output_filename.str()
-                            << " --event_id " << param->getEventId();
-            status = system(collect_command.str().c_str());
-            messager << "finished system call to python script with status: "
-                     << status;
-            messager.flush("info");
-            h5Flag = 1;
-        }
+    messager.info("One event finished");
+    if (param->getWriteOutputsToHDF5() == 1) {
+        int status = 0;
+        stringstream h5output_filename;
+        h5output_filename << "RESULTS_rank" << rank;
+        stringstream collect_command;
+        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                        << " --output_filename " << h5output_filename.str()
+                        << " --event_id " << param->getEventId();
+        status = system(collect_command.str().c_str());
+        messager << "finished system call to python script with status: "
+                 << status;
+        messager.flush("info");
+        h5Flag = 1;
     }
 
     delete random;
