@@ -358,11 +358,11 @@ int main(int argc, char *argv[]) {
             messager.info("Finish JIMWLK");
 
             if (param->getWriteInitialWilsonLines())
-                init.WriteInitialWilsonLines("evolved_", &lat, param);
+                lat.WriteInitialWilsonLines("evolved_", param);
         }
 
         init.shiftFieldsWithImpactParameter(&lat, param);
-        // init.WriteInitialWilsonLines("Shifted_", &lat, param);
+        // lat.WriteInitialWilsonLines("Shifted_", param);
         init.initializeForwardLightCone(&lat, param);
         messager.info("Start CYM evolution");
         // do the CYM evolution of the initialized fields using parmeters in

@@ -1,6 +1,7 @@
 #ifndef Lattice_h
 #define Lattice_h
 
+#include <string>
 #include <vector>
 
 #include "Cell.h"
@@ -14,9 +15,9 @@
 
 class Lattice {
   private:
-    int size;  // the total number of cells (length*length)
-    int Nc;  // the number of colors in SU(Nc): Determines the dimension of the
-             // used matrices
+    int size_;  // the total number of cells (length*length)
+    int Nc_;  // the number of colors in SU(Nc): Determines the dimension of the
+              // used matrices
 
   public:
     // constructor
@@ -25,7 +26,7 @@ class Lattice {
     ~Lattice();
 
     // functions to access values within individual cells
-    int getSize() { return size; };
+    int getSize() { return size_; };
 
     std::vector<Cell *> cells;  // the actual array of cells, the "lattice".
                                 // cells is an array of pointers to cell objects
@@ -34,13 +35,15 @@ class Lattice {
     std::vector<int> pospX;
     std::vector<int> posmY;
     std::vector<int> pospY;
+
+    void WriteInitialWilsonLines(std::string fileprefix, Parameters *param);
 };
 
 class BufferLattice {
   private:
-    int size;  // the total number of cells (length*length)
-    int Nc;  // the number of colors in SU(Nc): Determines the dimension of the
-             // used matrices
+    int size_;  // the total number of cells (length*length)
+    int Nc_;  // the number of colors in SU(Nc): Determines the dimension of the
+              // used matrices
 
   public:
     // constructor
