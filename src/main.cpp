@@ -361,6 +361,12 @@ int main(int argc, char *argv[]) {
                 lat.WriteInitialWilsonLines("evolved_", param);
         }
 
+        while (param->getSuccess() == 0) {
+            // sample collision impact parameter
+            // and compute Npart, Ncoll,etc, and check if there was a collision
+            init.sampleImpactParameter(param);
+            init.computeCollisionGeometryQuantities(&lat, param);
+        }
         init.shiftFieldsWithImpactParameter(&lat, param);
         // lat.WriteInitialWilsonLines("Shifted_", param);
         init.initializeForwardLightCone(&lat, param);

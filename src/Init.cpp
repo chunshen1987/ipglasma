@@ -2339,13 +2339,6 @@ void Init::init(
             // sample color charges and find Wilson lines V_A and V_B
             setV(lat, param);
         }
-
-        while (param->getSuccess() == 0) {
-            // sample collision impact parameter
-            // and compute Npart, Ncoll,etc, and check if there was a collision
-            sampleImpactParameter(param);
-            computeCollisionGeometryQuantities(lat, param);
-        }
     }
 }
 
