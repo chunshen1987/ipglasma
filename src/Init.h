@@ -57,7 +57,11 @@ class Init {
 
   public:
     // Constructor.
-    Init(const int nn[]) : fft(nn) {};
+    Init(const int nn[], const int Nc) : fft(nn) {
+        Nc_ = Nc;
+        Nc2m1_ = Nc_ * Nc_ - 1;
+        one_ = Matrix(Nc_, 1.);
+    };
 
     ~Init() {};
 

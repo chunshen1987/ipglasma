@@ -5,13 +5,14 @@
 #include <sstream>
 
 // constructor
-Lattice::Lattice(Parameters *param, int N, int length) {
-    Nc_ = N;
+Lattice::Lattice(Parameters *param, int Nc, int length) {
+    Nc_ = Nc;
+    N_ = length;
     size_ = length * length;
     double a = param->getL() / static_cast<double>(length);
 
-    std::cout << "Allocating square lattice of size_ " << length << "x"
-              << length << " with a=" << a << " fm ...";
+    std::cout << "Allocating square lattice of size " << length << "x" << length
+              << " with a=" << a << " fm ...";
 
     // initialize the array of cells
     for (int i = 0; i < size_; i++) {
@@ -20,8 +21,8 @@ Lattice::Lattice(Parameters *param, int N, int length) {
         cells.push_back(cell);
     }
 
-    for (int i = 0; i < length; i++) {
-        for (int j = 0; j < length; j++) {
+    for (int i = 0; i < N_; i++) {
+        for (int j = 0; j < N_; j++) {
             // pos = i*length+j;
             pospX.push_back((std::min(length - 1, i + 1)) * length + j);
             pospY.push_back(i * length + std::min(length - 1, j + 1));
@@ -38,10 +39,57 @@ Lattice::~Lattice() {
     cells.clear();
 }
 
+void Lattice::WriteSU3Matricies(std::string fileprefix, Parameters *param) {
+    const double L = param->getL();
+    const double a = L / static_cast<double>(N_);  // lattice spacing in fm
+
+    std::stringstream strVOne_name;
+    strVOne_name << fileprefix << "Phi-"
+                 << param->getEventId()
+                        + 2 * param->getSeed() * param->getMPISize()
+                 << ".txt";
+
+    std::stringstream strVTwo_name;
+    strVTwo_name << fileprefix << "Pi-"
+                 << param->getEventId()
+                        + (1 + 2 * param->getSeed()) * param->getMPISize()
+                 << ".txt";
+
+    // Output in text
+    std::ofstream foutU(strVOne_name.str().c_str(), std::ios::out);
+    foutU.precision(15);
+
+    for (int ix = 0; ix < N_; ix++) {
+        for (int iy = 0; iy < N_; iy++) {
+            int pos = ix * N_ + iy;
+            foutU << ix << " " << iy << " "
+                  << (cells[pos]->getphi()).MatrixToString() << std::endl;
+        }
+        foutU << std::endl;
+    }
+    foutU.close();
+
+    std::cout << "wrote " << strVOne_name.str() << std::endl;
+
+    std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
+    foutU2.precision(15);
+    for (int ix = 0; ix < N_; ix++) {
+        for (int iy = 0; iy < N_; iy++) {
+            int pos = ix * N_ + iy;
+            foutU2 << ix << " " << iy << " "
+                   << (cells[pos]->getpi()).MatrixToString() << std::endl;
+        }
+        foutU2 << std::endl;
+    }
+    foutU2.close();
+
+    std::cout << "wrote " << strVTwo_name.str() << std::endl;
+}
+
 void Lattice::WriteInitialWilsonLines(
     std::string fileprefix, Parameters *param) {
     const double L = param->getL();
-    const double a = L / static_cast<double>(size_);  // lattice spacing in fm
+    const double a = L / static_cast<double>(N_);  // lattice spacing in fm
 
     std::stringstream strVOne_name;
     strVOne_name << fileprefix << "V-"
@@ -60,9 +108,9 @@ void Lattice::WriteInitialWilsonLines(
         std::ofstream foutU(strVOne_name.str().c_str(), std::ios::out);
         foutU.precision(15);
 
-        for (int ix = 0; ix < size_; ix++) {
-            for (int iy = 0; iy < size_; iy++) {
-                int pos = ix * size_ + iy;
+        for (int ix = 0; ix < N_; ix++) {
+            for (int iy = 0; iy < N_; iy++) {
+                int pos = ix * N_ + iy;
                 foutU << ix << " " << iy << " "
                       << (cells[pos]->getU()).MatrixToString() << std::endl;
             }
@@ -74,9 +122,9 @@ void Lattice::WriteInitialWilsonLines(
 
         std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
         foutU2.precision(15);
-        for (int ix = 0; ix < size_; ix++) {
-            for (int iy = 0; iy < size_; iy++) {
-                int pos = ix * size_ + iy;
+        for (int ix = 0; ix < N_; ix++) {
+            for (int iy = 0; iy < N_; iy++) {
+                int pos = ix * N_ + iy;
                 foutU2 << ix << " " << iy << " "
                        << (cells[pos]->getU2()).MatrixToString() << std::endl;
             }
@@ -95,13 +143,13 @@ void Lattice::WriteInitialWilsonLines(
         double temp = param->getRapidity();
 
         // print header ------------- //
-        Outfile1.write((char *)&size_, sizeof(int));
+        Outfile1.write((char *)&N_, sizeof(int));
         Outfile1.write((char *)&Nc_, sizeof(int));
         Outfile1.write((char *)&L, sizeof(double));
         Outfile1.write((char *)&a, sizeof(double));
         Outfile1.write((char *)&temp, sizeof(double));
 
-        Outfile2.write((char *)&size_, sizeof(int));
+        Outfile2.write((char *)&N_, sizeof(int));
         Outfile2.write((char *)&Nc_, sizeof(int));
         Outfile2.write((char *)&L, sizeof(double));
         Outfile2.write((char *)&a, sizeof(double));
@@ -110,11 +158,11 @@ void Lattice::WriteInitialWilsonLines(
         double *val1 = new double[2];
         double *val2 = new double[2];
 
-        for (int ix = 0; ix < size_; ix++) {
-            for (int iy = 0; iy < size_; iy++) {
+        for (int ix = 0; ix < N_; ix++) {
+            for (int iy = 0; iy < N_; iy++) {
                 for (int a1 = 0; a1 < 3; a1++) {
                     for (int b = 0; b < 3; b++) {
-                        int indx = size_ * iy + ix;
+                        int indx = N_ * iy + ix;
                         int SU3indx = a1 * Nc_ + b;
                         val1[0] = (cells[indx]->getU()).getRe(SU3indx);
                         val1[1] = (cells[indx]->getU()).getIm(SU3indx);

@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
         fout1.close();
 
         // initialize init object
-        Init init(nn);
+        Init init(nn, param->getNc());
 
         // initialize group
         Group group(param->getNc());

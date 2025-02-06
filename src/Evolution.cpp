@@ -409,7 +409,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             u(lat, param, it, true);
         }
 
-        if (it % 10 == 0) {
+        if (it % 10 == 1) {
             cout << "Evolving to time " << it * a * dtau << " fm/c" << endl;
         }
 

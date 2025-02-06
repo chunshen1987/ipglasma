@@ -16,12 +16,13 @@
 class Lattice {
   private:
     int size_;  // the total number of cells (length*length)
+    int N_;     // cells in x-direction
     int Nc_;  // the number of colors in SU(Nc): Determines the dimension of the
               // used matrices
 
   public:
     // constructor
-    Lattice(Parameters *param, int N, int length);
+    Lattice(Parameters *param, int Nc, int length);
     // destructor
     ~Lattice();
 
@@ -37,6 +38,7 @@ class Lattice {
     std::vector<int> pospY;
 
     void WriteInitialWilsonLines(std::string fileprefix, Parameters *param);
+    void WriteSU3Matricies(std::string fileprefix, Parameters *param);
 };
 
 class BufferLattice {

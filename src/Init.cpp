@@ -2306,11 +2306,8 @@ void Init::sampleImpactParameter(Parameters *param) {
 void Init::init(
     Lattice *lat, Group *group, Parameters *param, Random *random,
     Glauber *glauber, Initialization_method init_method) {
-    Nc_ = param->getNc();
-    Nc2m1_ = Nc_ * Nc_ - 1;
     group_ptr_ = group;
     random_ptr_ = random;
-    one_ = Matrix(Nc_, 1.);
 
     messager.info("Initializing fields ... ");
 
@@ -2360,12 +2357,10 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
     messager.flush("info");
 
     const int N = param->getSize();
-    Lattice lat_old(param, param->getNc(), param->getSize());
+    BufferLattice lat_tmp(param->getNc(), param->getSize());
     for (int ipos = 0; ipos < N * N; ipos++) {
-        lat_old.cells[ipos]->setU(lat->cells[ipos]->getU());
-        lat_old.cells[ipos]->setU2(lat->cells[ipos]->getU2());
-        lat->cells[ipos]->setU(one_);
-        lat->cells[ipos]->setU2(one_);
+        lat_tmp.cells[ipos]->setbuffer1(lat->cells[ipos]->getU());
+        lat_tmp.cells[ipos]->setbuffer2(lat->cells[ipos]->getU2());
     }
 
     const double L = param->getL();
@@ -2387,12 +2382,16 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
         int iyB = static_cast<int>((yB + L / 2.) / a);
 
         int posA = ixA * N + iyA;
-        if (posA > 0 && posA < N * N) {
-            lat->cells[ipos]->setU(lat_old.cells[posA]->getU());
+        if (posA >= 0 && posA < N * N) {
+            lat->cells[ipos]->setU(lat_tmp.cells[posA]->getbuffer1());
+        } else {
+            lat->cells[ipos]->setU(one_);
         }
         int posB = ixB * N + iyB;
-        if (posB > 0 && posB < N * N) {
-            lat->cells[ipos]->setU2(lat_old.cells[posB]->getU2());
+        if (posB >= 0 && posB < N * N) {
+            lat->cells[ipos]->setU2(lat_tmp.cells[posB]->getbuffer2());
+        } else {
+            lat->cells[ipos]->setU2(one_);
         }
     }
 }
@@ -2407,24 +2406,23 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
     double x, y;
 #pragma omp parallel
     {
-        Matrix temp2(Nc_, 0.);
-        Matrix Ux(Nc_, 0.);
-        Matrix Uy(Nc_, 0.);
-        Matrix UDx(Nc_, 0.);
-        Matrix UDy(Nc_, 0.);
-        Matrix UDx1(Nc_, 0.);
-        Matrix UDy1(Nc_, 0.);
+        Matrix temp2(Nc_, 1);
+        Matrix Ux(Nc_, 1);
+        Matrix Uy(Nc_, 1);
+        Matrix UDx(Nc_, 1);
+        Matrix UDy(Nc_, 1);
+        Matrix UDx1(Nc_, 1);
+        Matrix UDy1(Nc_, 1);
 
-        Matrix Uplaq(Nc_, 0.);
+        Matrix Uplaq(Nc_, 1);
 
-        Matrix UD2(Nc_, 0.);
-        Matrix UDx2(Nc_, 0.);
-        Matrix UDy2(Nc_, 0.);
+        Matrix UDx2(Nc_, 1);
+        Matrix UDy2(Nc_, 1);
 
-        Matrix Ux1mUx2(Nc_, 0.);
-        Matrix UDx1mUDx2(Nc_, 0.);
-        Matrix Uy1mUy2(Nc_, 0.);
-        Matrix UDy1mUDy2(Nc_, 0.);
+        Matrix Ux1mUx2(Nc_, 1);
+        Matrix UDx1mUDx2(Nc_, 1);
+        Matrix Uy1mUy2(Nc_, 1);
+        Matrix UDy1mUDy2(Nc_, 1);
 
 // compute Ux(3) Uy(3) after the collision
 #pragma omp for
@@ -2494,11 +2492,8 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
         for (int pos = 0; pos < N2; pos++) {
             // x part in sum:
             Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-            UDx1 = lat->cells[pos]->getUx1();
-            UDx1.conjg();
-            UDx2 = lat->cells[pos]->getUx2();
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
+            UDx1mUDx2 = Ux1mUx2;
+            UDx1mUDx2.conjg();
 
             Ux = lat->cells[pos]->getUx();
             UDx = Ux;
@@ -2508,11 +2503,8 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
             Ux1mUx2 = lat->cells[lat->posmX[pos]]->getUx1()
                       - lat->cells[lat->posmX[pos]]->getUx2();
-            UDx1 = lat->cells[lat->posmX[pos]]->getUx1();
-            UDx1.conjg();
-            UDx2 = lat->cells[lat->posmX[pos]]->getUx2();
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
+            UDx1mUDx2 = Ux1mUx2;
+            UDx1mUDx2.conjg();
 
             Ux = lat->cells[lat->posmX[pos]]->getUx();
             UDx = Ux;
@@ -2523,11 +2515,8 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
             // y part in sum
             Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-            UDy1 = lat->cells[pos]->getUy1();
-            UDy1.conjg();
-            UDy2 = lat->cells[pos]->getUy2();
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
+            UDy1mUDy2 = Uy1mUy2;
+            UDy1mUDy2.conjg();
 
             Uy = lat->cells[pos]->getUy();
             UDy = Uy;
@@ -2539,11 +2528,8 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
             Uy1mUy2 = lat->cells[lat->posmY[pos]]->getUy1()
                       - lat->cells[lat->posmY[pos]]->getUy2();
-            UDy1 = lat->cells[lat->posmY[pos]]->getUy1();
-            UDy1.conjg();
-            UDy2 = lat->cells[lat->posmY[pos]]->getUy2();
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
+            UDy1mUDy2 = Uy1mUy2;
+            UDy1mUDy2.conjg();
 
             Uy = lat->cells[lat->posmY[pos]]->getUy();
             UDy = Uy;
@@ -2555,71 +2541,71 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             lat->cells[pos]->setE1((1. / 8.) * temp2);
         }
 
-// with plus ax, ay
-#pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // x part in sum:
-            Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-            UDx1 = lat->cells[pos]->getUx1();
-            UDx1.conjg();
-            UDx2 = lat->cells[pos]->getUx2();
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
-
-            Ux = lat->cells[pos]->getUx();
-            UDx = Ux;
-            UDx.conjg();
-
-            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
-
-            Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()
-                      - lat->cells[lat->pospX[pos]]->getUx2();
-            UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
-            UDx1.conjg();
-            UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
-
-            Ux = lat->cells[lat->pospX[pos]]->getUx();
-            UDx = Ux;
-            UDx.conjg();
-
-            temp2 =
-                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
-
-            // y part in sum
-            Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-            UDy1 = lat->cells[pos]->getUy1();
-            UDy1.conjg();
-            UDy2 = lat->cells[pos]->getUy2();
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
-
-            Uy = lat->cells[pos]->getUy();
-            UDy = Uy;
-            UDy.conjg();
-
-            // y part of the sum:
-            temp2 =
-                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
-
-            Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()
-                      - lat->cells[lat->pospY[pos]]->getUy2();
-            UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
-            UDy1.conjg();
-            UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
-
-            Uy = lat->cells[lat->pospY[pos]]->getUy();
-            UDy = Uy;
-            UDy.conjg();
-
-            temp2 =
-                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
-
-            lat->cells[pos]->setE2((1. / 8.) * temp2);
-        }
+//// with plus ax, ay
+// #pragma omp for
+//         for (int pos = 0; pos < N2; pos++) {
+//             // x part in sum:
+//             Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
+//             UDx1 = lat->cells[pos]->getUx1();
+//             UDx1.conjg();
+//             UDx2 = lat->cells[pos]->getUx2();
+//             UDx2.conjg();
+//             UDx1mUDx2 = UDx1 - UDx2;
+//
+//             Ux = lat->cells[pos]->getUx();
+//             UDx = Ux;
+//             UDx.conjg();
+//
+//             temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+//
+//             Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()
+//                       - lat->cells[lat->pospX[pos]]->getUx2();
+//             UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
+//             UDx1.conjg();
+//             UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
+//             UDx2.conjg();
+//             UDx1mUDx2 = UDx1 - UDx2;
+//
+//             Ux = lat->cells[lat->pospX[pos]]->getUx();
+//             UDx = Ux;
+//             UDx.conjg();
+//
+//             temp2 =
+//                 temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
+//
+//             // y part in sum
+//             Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
+//             UDy1 = lat->cells[pos]->getUy1();
+//             UDy1.conjg();
+//             UDy2 = lat->cells[pos]->getUy2();
+//             UDy2.conjg();
+//             UDy1mUDy2 = UDy1 - UDy2;
+//
+//             Uy = lat->cells[pos]->getUy();
+//             UDy = Uy;
+//             UDy.conjg();
+//
+//             // y part of the sum:
+//             temp2 =
+//                 temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
+//
+//             Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()
+//                       - lat->cells[lat->pospY[pos]]->getUy2();
+//             UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
+//             UDy1.conjg();
+//             UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
+//             UDy2.conjg();
+//             UDy1mUDy2 = UDy1 - UDy2;
+//
+//             Uy = lat->cells[lat->pospY[pos]]->getUy();
+//             UDy = Uy;
+//             UDy.conjg();
+//
+//             temp2 =
+//                 temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
+//
+//             lat->cells[pos]->setE2((1. / 8.) * temp2);
+//         }
 
 // compute the plaquette
 #pragma omp for
@@ -2662,7 +2648,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             lat->cells[pos]->setphi(zero);
 
             // reset the Ux1 to be used for other purposes later
-            lat->cells[pos]->setUx1(one_);
+            // lat->cells[pos]->setUx1(one_);
         }
     }  // omp block
 }
