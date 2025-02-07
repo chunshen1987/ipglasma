@@ -10,6 +10,7 @@ Lattice::Lattice(Parameters *param, int Nc, int length) {
     N_ = length;
     size_ = length * length;
     double a = param->getL() / static_cast<double>(length);
+    int mode = param->getMode();
 
     std::cout << "Allocating square lattice of size " << length << "x" << length
               << " with a=" << a << " fm ...";
@@ -17,7 +18,7 @@ Lattice::Lattice(Parameters *param, int Nc, int length) {
     // initialize the array of cells
     for (int i = 0; i < size_; i++) {
         Cell *cell;
-        cell = new Cell(Nc_);
+        cell = new Cell(Nc_, mode);
         cells.push_back(cell);
     }
 

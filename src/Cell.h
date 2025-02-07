@@ -10,6 +10,7 @@
 
 class Cell {
   private:
+    int mode_;
     double epsilon;  // energy density after collision
 
     // nucleus A
@@ -39,35 +40,14 @@ class Cell {
 
     //  bool parity; // Parity of the cell (needed for Gauge fixing)
 
-    double Ttautau;  // energy momentum tensor
-    double Txx;      // energy momentum tensor
-    double Tyy;      // energy momentum tensor
-    double Txy;      // energy momentum tensor
-    double Tetaeta;  // energy momentum tensor
-    double Ttaux;    // energy momentum tensor
-    double Ttauy;    // energy momentum tensor
-    double Ttaueta;  // energy momentum tensor
-    double Txeta;    // energy momentum tensor
-    double Tyeta;    // energy momentum tensor
+    std::vector<double> Tmunu;
 
-    double pitautau;  // energy momentum tensor
-    double pixx;      // energy momentum tensor
-    double piyy;      // energy momentum tensor
-    double pixy;      // energy momentum tensor
-    double pietaeta;  // energy momentum tensor
-    double pitaux;    // energy momentum tensor
-    double pitauy;    // energy momentum tensor
-    double pitaueta;  // energy momentum tensor
-    double pixeta;    // energy momentum tensor
-    double piyeta;    // energy momentum tensor
+    std::vector<double> pimunu;
 
-    double utau;  // flow velocity
-    double ux;    // flow velocity
-    double uy;    // flow velocity
-    double ueta;  // flow velocity
+    std::vector<double> umu;
 
   public:
-    Cell(const int Nc);
+    Cell(const int Nc, const int mode);
     ~Cell();
 
     //  void setParity(bool in) { parity = in; };
@@ -101,56 +81,56 @@ class Cell {
     void setEpsilon(const double in) { epsilon = in; };
     double getEpsilon() { return epsilon; };
 
-    void setTtautau(const double in) { Ttautau = in; };
-    double getTtautau() { return Ttautau; };
-    void setTxx(const double in) { Txx = in; };
-    double getTxx() { return Txx; };
-    void setTyy(const double in) { Tyy = in; };
-    double getTyy() { return Tyy; };
-    void setTxy(const double in) { Txy = in; };
-    double getTxy() { return Txy; };
-    void setTetaeta(const double in) { Tetaeta = in; };
-    double getTetaeta() { return Tetaeta; };
-    void setTtaux(const double in) { Ttaux = in; };
-    double getTtaux() { return Ttaux; };
-    void setTtauy(const double in) { Ttauy = in; };
-    double getTtauy() { return Ttauy; };
-    void setTtaueta(const double in) { Ttaueta = in; };
-    double getTtaueta() { return Ttaueta; };
-    void setTxeta(const double in) { Txeta = in; };
-    double getTxeta() { return Txeta; };
-    void setTyeta(const double in) { Tyeta = in; };
-    double getTyeta() { return Tyeta; };
+    void setTtautau(const double in) { Tmunu[0] = in; };
+    double getTtautau() { return Tmunu[0]; };
+    void setTxx(const double in) { Tmunu[4] = in; };
+    double getTxx() { return Tmunu[4]; };
+    void setTyy(const double in) { Tmunu[7] = in; };
+    double getTyy() { return Tmunu[7]; };
+    void setTxy(const double in) { Tmunu[5] = in; };
+    double getTxy() { return Tmunu[5]; };
+    void setTetaeta(const double in) { Tmunu[9] = in; };
+    double getTetaeta() { return Tmunu[9]; };
+    void setTtaux(const double in) { Tmunu[1] = in; };
+    double getTtaux() { return Tmunu[1]; };
+    void setTtauy(const double in) { Tmunu[2] = in; };
+    double getTtauy() { return Tmunu[2]; };
+    void setTtaueta(const double in) { Tmunu[3] = in; };
+    double getTtaueta() { return Tmunu[3]; };
+    void setTxeta(const double in) { Tmunu[6] = in; };
+    double getTxeta() { return Tmunu[6]; };
+    void setTyeta(const double in) { Tmunu[8] = in; };
+    double getTyeta() { return Tmunu[8]; };
 
-    void setpitautau(const double in) { pitautau = in; };
-    double getpitautau() { return pitautau; };
-    void setpixx(const double in) { pixx = in; };
-    double getpixx() { return pixx; };
-    void setpiyy(const double in) { piyy = in; };
-    double getpiyy() { return piyy; };
-    void setpixy(const double in) { pixy = in; };
-    double getpixy() { return pixy; };
-    void setpietaeta(const double in) { pietaeta = in; };
-    double getpietaeta() { return pietaeta; };
-    void setpitaux(const double in) { pitaux = in; };
-    double getpitaux() { return pitaux; };
-    void setpitauy(const double in) { pitauy = in; };
-    double getpitauy() { return pitauy; };
-    void setpitaueta(const double in) { pitaueta = in; };
-    double getpitaueta() { return pitaueta; };
-    void setpixeta(const double in) { pixeta = in; };
-    double getpixeta() { return pixeta; };
-    void setpiyeta(const double in) { piyeta = in; };
-    double getpiyeta() { return piyeta; };
+    void setpitautau(const double in) { pimunu[0] = in; };
+    double getpitautau() { return pimunu[0]; };
+    void setpixx(const double in) { pimunu[4] = in; };
+    double getpixx() { return pimunu[4]; };
+    void setpiyy(const double in) { pimunu[7] = in; };
+    double getpiyy() { return pimunu[7]; };
+    void setpixy(const double in) { pimunu[5] = in; };
+    double getpixy() { return pimunu[5]; };
+    void setpietaeta(const double in) { pimunu[9] = in; };
+    double getpietaeta() { return pimunu[9]; };
+    void setpitaux(const double in) { pimunu[1] = in; };
+    double getpitaux() { return pimunu[1]; };
+    void setpitauy(const double in) { pimunu[2] = in; };
+    double getpitauy() { return pimunu[2]; };
+    void setpitaueta(const double in) { pimunu[3] = in; };
+    double getpitaueta() { return pimunu[3]; };
+    void setpixeta(const double in) { pimunu[6] = in; };
+    double getpixeta() { return pimunu[6]; };
+    void setpiyeta(const double in) { pimunu[8] = in; };
+    double getpiyeta() { return pimunu[8]; };
 
-    void setutau(const double in) { utau = in; };
-    double getutau() { return utau; };
-    void setux(const double in) { ux = in; };
-    double getux() { return ux; };
-    void setuy(const double in) { uy = in; };
-    double getuy() { return uy; };
-    void setueta(const double in) { ueta = in; };
-    double getueta() { return ueta; };
+    void setutau(const double in) { umu[0] = in; };
+    double getutau() { return umu[0]; };
+    void setux(const double in) { umu[1] = in; };
+    double getux() { return umu[1]; };
+    void setuy(const double in) { umu[2] = in; };
+    double getuy() { return umu[2]; };
+    void setueta(const double in) { umu[3] = in; };
+    double getueta() { return umu[3]; };
 
     Matrix &getg() const { return *Ux1; };  // use unused Ux1 to store g
     Matrix &getU() const { return *U; };

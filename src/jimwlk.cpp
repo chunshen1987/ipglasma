@@ -189,6 +189,7 @@ void JIMWLK::evolution() {
     // Calculate evolution steps for different nuclei
     double x0 = param_.getJimwlk_x0();
     double ds = param_.getDs_jimwlk();
+    bool saveSnapshots = param_.getSaveSnapshots();
     std::vector<double> xSnapshotList = param_.getxSnapshotList();
     double dlogx = M_PI * M_PI * ds;
     int steps_1 = 0;
@@ -224,12 +225,14 @@ void JIMWLK::evolution() {
         }
         double xLoc = x0 * exp(-ids * dlogx);
         evolutionStep();
-        if (iSnapshot < xSnapshotList.size()) {
-            if (xLoc > xSnapshotList[iSnapshot]
-                && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                lat_ptr_->WriteInitialWilsonLines(
-                    "JIMWLK_x_" + std::to_string(xLoc), &param_);
-                iSnapshot++;
+        if (saveSnapshots) {
+            if (iSnapshot < xSnapshotList.size()) {
+                if (xLoc > xSnapshotList[iSnapshot]
+                    && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
+                    lat_ptr_->WriteInitialWilsonLines(
+                        "JIMWLK_x_" + std::to_string(xLoc), &param_);
+                    iSnapshot++;
+                }
             }
         }
     }
@@ -244,12 +247,14 @@ void JIMWLK::evolution() {
         }
         double xLoc = x0 * exp(-ids * dlogx);
         evolutionStep2();
-        if (iSnapshot < xSnapshotList.size()) {
-            if (xLoc > xSnapshotList[iSnapshot]
-                && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                lat_ptr_->WriteInitialWilsonLines(
-                    "JIMWLK_x_" + std::to_string(xLoc), &param_);
-                iSnapshot++;
+        if (saveSnapshots) {
+            if (iSnapshot < xSnapshotList.size()) {
+                if (xLoc > xSnapshotList[iSnapshot]
+                    && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
+                    lat_ptr_->WriteInitialWilsonLines(
+                        "JIMWLK_x_" + std::to_string(xLoc), &param_);
+                    iSnapshot++;
+                }
             }
         }
     }

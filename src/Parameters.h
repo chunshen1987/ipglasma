@@ -232,6 +232,7 @@ class Parameters {
 
     double jimwlk_x1;  // Bjorken x for the nucleus A (projectile)
     double jimwlk_x2;  // Bjorken x for the nucleus B (target)
+    bool saveSnapshots_;
     std::vector<double> xSnapshotList_;
 
   public:
@@ -558,5 +559,12 @@ class Parameters {
     }
     void setxSnapshotList(std::vector<double> xList) { xSnapshotList_ = xList; }
     std::vector<double> getxSnapshotList() { return xSnapshotList_; }
+    void setSaveSnapshots(int x) {
+        if (x == 0)
+            saveSnapshots_ = false;
+        else
+            saveSnapshots_ = true;
+    }
+    bool getSaveSnapshots() { return saveSnapshots_; }
 };
 #endif  // Parameters_H

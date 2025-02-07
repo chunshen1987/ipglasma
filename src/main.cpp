@@ -361,19 +361,22 @@ int main(int argc, char *argv[]) {
                 lat.WriteInitialWilsonLines("evolved_", param);
         }
 
-        while (param->getSuccess() == 0) {
-            // sample collision impact parameter
-            // and compute Npart, Ncoll,etc, and check if there was a collision
-            init.sampleImpactParameter(param);
-            init.computeCollisionGeometryQuantities(&lat, param);
+        if (param->getMode() == 1) {
+            while (param->getSuccess() == 0) {
+                // sample collision impact parameter
+                // and compute Npart, Ncoll,etc, and check if there was a
+                // collision
+                init.sampleImpactParameter(param);
+                init.computeCollisionGeometryQuantities(&lat, param);
+            }
+            init.shiftFieldsWithImpactParameter(&lat, param);
+            // lat.WriteInitialWilsonLines("Shifted_", param);
+            init.initializeForwardLightCone(&lat, param);
+            messager.info("Start CYM evolution");
+            // do the CYM evolution of the initialized fields using parmeters in
+            // param
+            evolution.run(&lat, &group, param);
         }
-        init.shiftFieldsWithImpactParameter(&lat, param);
-        // lat.WriteInitialWilsonLines("Shifted_", param);
-        init.initializeForwardLightCone(&lat, param);
-        messager.info("Start CYM evolution");
-        // do the CYM evolution of the initialized fields using parmeters in
-        // param
-        evolution.run(&lat, &group, param);
     }
 
 #ifndef DISABLEMPI
@@ -602,6 +605,7 @@ int readInput(
         setup->DFind(file_name, "x_projectile_jimwlk"));
     param->SetJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
     param->setJimwlk_x0(setup->DFind(file_name, "jimwlk_ic_x"));
+    param->setSaveSnapshots(setup->IFind(file_name, "saveSnapshots"));
     param->setxSnapshotList(setup->ListFind(file_name, "xSnapshotList"));
 
     if (rank == 0) cout << "done." << endl;
