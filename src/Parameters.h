@@ -87,14 +87,14 @@ class Parameters {
                        // output files (like hydro input data)
     int writeOutputsToHDF5;  // decide whether to write (1) or not write (0)
                              // output files to one hdf5 file
-    int writeEvolution;  // decide whether to write (1) or not write (0) time
-                         // dependent quantities like the anisotropy
-    int writeInitialWilsonLines;  // decide whether to write (1) in text or (2)
-                                  // in binary format or not write (0) generated
-                                  // Wilson lines (before any evolution)
-    int readInitialWilsonLines;   // decide wheter to generate initial Wilson
-                                  // lines (0), or read these in plain text (1)
-                                  // or in binary format (2)
+    int writeEvolution;    // decide whether to write (1) or not write (0) time
+                           // dependent quantities like the anisotropy
+    int writeWilsonLines;  // decide whether to write (1) in text or (2)
+                           // in binary format or not write (0) generated
+                           // Wilson lines (before any evolution)
+    int readInitialWilsonLines;  // decide wheter to generate initial Wilson
+                                 // lines (0), or read these in plain text (1)
+                                 // or in binary format (2)
     unsigned long long int randomSeed;  // stores the random seed used (so the
                                         // event can be reproduced)
     std::string
@@ -465,8 +465,8 @@ class Parameters {
     int getWriteOutputsToHDF5() { return writeOutputsToHDF5; }
     void setWriteEvolution(int x) { writeEvolution = x; };
     int getWriteEvolution() { return writeEvolution; }
-    void setWriteInitialWilsonLines(int x) { writeInitialWilsonLines = x; }
-    int getWriteInitialWilsonLines() { return writeInitialWilsonLines; }
+    void setWriteWilsonLines(int x) { writeWilsonLines = x; }
+    int getWriteWilsonLines() { return writeWilsonLines; }
     void setReadInitialWilsonLines(int x) { readInitialWilsonLines = x; }
     int getReadInitialWilsonLines() { return readInitialWilsonLines; }
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile = x; }
@@ -537,10 +537,10 @@ class Parameters {
     bool getSimpleLangevin() const { return simpleLangevin_; }
     void setLambdaQCD_jimwlk(double x) { LambdaQCD_jimwlk = x; }
     double getLambdaQCD_jimwlk() { return LambdaQCD_jimwlk; }
-    void SetJimwlk_x_projectile(double x) { jimwlk_x1 = x; }
-    double GetJimwlk_x_projectile() { return jimwlk_x1; }
-    void SetJimwlk_x_target(double x) { jimwlk_x2 = x; }
-    double GetJimwlk_x_target() { return jimwlk_x2; }
+    void setJimwlk_x_projectile(double x) { jimwlk_x1 = x; }
+    double getJimwlk_x_projectile() { return jimwlk_x1; }
+    void setJimwlk_x_target(double x) { jimwlk_x2 = x; }
+    double getJimwlk_x_target() { return jimwlk_x2; }
     // void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
     // int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
     void setDs_jimwlk(double x) { ds_jimwlk = x; }

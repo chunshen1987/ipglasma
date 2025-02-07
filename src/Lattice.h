@@ -37,7 +37,8 @@ class Lattice {
     std::vector<int> posmY;
     std::vector<int> pospY;
 
-    void WriteInitialWilsonLines(std::string fileprefix, Parameters *param);
+    void WriteWilsonLines(
+        std::string fileprefix, Parameters *param, const int iA);
     void WriteSU3Matricies(std::string fileprefix, Parameters *param);
 };
 

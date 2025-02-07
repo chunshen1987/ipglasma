@@ -1806,8 +1806,11 @@ void Init::setV(Lattice *lat, Parameters *param) {
     delete[] rhoACoeff;
 
     // output U
-    if (param->getWriteInitialWilsonLines() > 0) {
-        lat->WriteInitialWilsonLines("", param);
+    if (param->getWriteWilsonLines() > 0) {
+        std::string wilsonfileHeader =
+            ("Initial_x_" + std::to_string(param->getJimwlk_x0()) + "_");
+        lat->WriteWilsonLines(wilsonfileHeader, param, 1);  // nucleus A
+        lat->WriteWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
     }
 
     messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()

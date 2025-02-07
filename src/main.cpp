@@ -357,8 +357,16 @@ int main(int argc, char *argv[]) {
             jimwlkSolver.evolution();
             messager.info("Finish JIMWLK");
 
-            if (param->getWriteInitialWilsonLines())
-                lat.WriteInitialWilsonLines("evolved_", param);
+            if (param->getWriteWilsonLines() > 0) {
+                std::string fileHeader =
+                    ("Final_x_"
+                     + std::to_string(param->getJimwlk_x_projectile()) + "_");
+                lat.WriteWilsonLines(fileHeader, param, 1);  // nucleus A
+                fileHeader =
+                    ("Final_x_" + std::to_string(param->getJimwlk_x_target())
+                     + "_");
+                lat.WriteWilsonLines(fileHeader, param, 2);  // nucleus B
+            }
         }
 
         if (param->getMode() == 1) {
@@ -370,7 +378,6 @@ int main(int argc, char *argv[]) {
                 init.computeCollisionGeometryQuantities(&lat, param);
             }
             init.shiftFieldsWithImpactParameter(&lat, param);
-            // lat.WriteInitialWilsonLines("Shifted_", param);
             init.initializeForwardLightCone(&lat, param);
             messager.info("Start CYM evolution");
             // do the CYM evolution of the initialized fields using parmeters in
@@ -564,8 +571,7 @@ int readInput(
     param->setWriteOutputs(setup->IFind(file_name, "writeOutputs"));
     param->setWriteOutputsToHDF5(setup->IFind(file_name, "writeOutputsToHDF5"));
     param->setWriteEvolution(setup->IFind(file_name, "writeEvolution"));
-    param->setWriteInitialWilsonLines(
-        setup->IFind(file_name, "writeInitialWilsonLines"));
+    param->setWriteWilsonLines(setup->IFind(file_name, "writeWilsonLines"));
     param->setReadInitialWilsonLines(
         setup->IFind(file_name, "readInitialWilsonLines"));
     param->setAverageOverNuclei(
@@ -601,9 +607,9 @@ int readInput(
     param->setm_jimwlk(setup->DFind(file_name, "m_jimwlk"));
     param->setJimwlk_alphas(setup->IFind(file_name, "alphas_jimwlk"));
     param->setDs_jimwlk(setup->DFind(file_name, "Ds_jimwlk"));
-    param->SetJimwlk_x_projectile(
+    param->setJimwlk_x_projectile(
         setup->DFind(file_name, "x_projectile_jimwlk"));
-    param->SetJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
+    param->setJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
     param->setJimwlk_x0(setup->DFind(file_name, "jimwlk_ic_x"));
     param->setSaveSnapshots(setup->IFind(file_name, "saveSnapshots"));
     param->setxSnapshotList(setup->ListFind(file_name, "xSnapshotList"));

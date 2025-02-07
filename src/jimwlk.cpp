@@ -198,20 +198,20 @@ void JIMWLK::evolution() {
     if (as > 1e-10) {
         // Fixed coupling
         steps_1 = static_cast<int>(
-            as * std::log(x0 / param_.GetJimwlk_x_projectile())
+            as * std::log(x0 / param_.getJimwlk_x_projectile())
                 / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            as * std::log(x0 / param_.GetJimwlk_x_target()) / (M_PI * M_PI * ds)
+            as * std::log(x0 / param_.getJimwlk_x_target()) / (M_PI * M_PI * ds)
             + 0.5);
         dlogx = M_PI * M_PI * ds / as;
     } else {
         // Running coupling
         steps_1 = static_cast<int>(
-            std::log(x0 / param_.GetJimwlk_x_projectile()) / (M_PI * M_PI * ds)
+            std::log(x0 / param_.getJimwlk_x_projectile()) / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            std::log(x0 / param_.GetJimwlk_x_target()) / (M_PI * M_PI * ds)
+            std::log(x0 / param_.getJimwlk_x_target()) / (M_PI * M_PI * ds)
             + 0.5);
     }
 
@@ -229,8 +229,9 @@ void JIMWLK::evolution() {
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    lat_ptr_->WriteInitialWilsonLines(
-                        "JIMWLK_x_" + std::to_string(xLoc), &param_);
+                    lat_ptr_->WriteWilsonLines(
+                        "JIMWLKSnapshot_x_" + std::to_string(xLoc) + "_",
+                        &param_, 1);
                     iSnapshot++;
                 }
             }
@@ -251,8 +252,9 @@ void JIMWLK::evolution() {
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    lat_ptr_->WriteInitialWilsonLines(
-                        "JIMWLK_x_" + std::to_string(xLoc), &param_);
+                    lat_ptr_->WriteWilsonLines(
+                        "JIMWLKSnapshot_x_" + std::to_string(xLoc) + "_",
+                        &param_, 2);
                     iSnapshot++;
                 }
             }

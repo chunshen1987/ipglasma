@@ -87,59 +87,43 @@ void Lattice::WriteSU3Matricies(std::string fileprefix, Parameters *param) {
     std::cout << "wrote " << strVTwo_name.str() << std::endl;
 }
 
-void Lattice::WriteInitialWilsonLines(
-    std::string fileprefix, Parameters *param) {
+void Lattice::WriteWilsonLines(
+    std::string fileprefix, Parameters *param, const int iA) {
     const double L = param->getL();
     const double a = L / static_cast<double>(N_);  // lattice spacing in fm
 
     std::stringstream strVOne_name;
     strVOne_name << fileprefix << "V-"
                  << param->getEventId()
-                        + 2 * param->getSeed() * param->getMPISize();
-    if (param->getWriteInitialWilsonLines() == 1) strVOne_name << ".txt";
-
-    std::stringstream strVTwo_name;
-    strVTwo_name << fileprefix << "V-"
-                 << param->getEventId()
-                        + (1 + 2 * param->getSeed()) * param->getMPISize();
-    if (param->getWriteInitialWilsonLines() == 1) strVTwo_name << ".txt";
+                        + (iA + 2 * param->getSeed()) * param->getMPISize();
+    if (param->getWriteWilsonLines() == 1) strVOne_name << ".txt";
 
     // Output in text
-    if (param->getWriteInitialWilsonLines() == 1) {
+    if (param->getWriteWilsonLines() == 1) {
         std::ofstream foutU(strVOne_name.str().c_str(), std::ios::out);
         foutU.precision(15);
 
         for (int ix = 0; ix < N_; ix++) {
             for (int iy = 0; iy < N_; iy++) {
                 int pos = ix * N_ + iy;
-                foutU << ix << " " << iy << " "
-                      << (cells[pos]->getU()).MatrixToString() << std::endl;
+                if (iA == 1) {
+                    foutU << ix << " " << iy << " "
+                          << (cells[pos]->getU()).MatrixToString() << std::endl;
+                } else {
+                    foutU << ix << " " << iy << " "
+                          << (cells[pos]->getU2()).MatrixToString()
+                          << std::endl;
+                }
             }
             foutU << std::endl;
         }
         foutU.close();
 
         std::cout << "wrote " << strVOne_name.str() << std::endl;
-
-        std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
-        foutU2.precision(15);
-        for (int ix = 0; ix < N_; ix++) {
-            for (int iy = 0; iy < N_; iy++) {
-                int pos = ix * N_ + iy;
-                foutU2 << ix << " " << iy << " "
-                       << (cells[pos]->getU2()).MatrixToString() << std::endl;
-            }
-            foutU2 << std::endl;
-        }
-        foutU2.close();
-
-        std::cout << "wrote " << strVTwo_name.str() << std::endl;
-    } else if (param->getWriteInitialWilsonLines() == 2) {
-        std::ofstream Outfile1, Outfile2;
+    } else if (param->getWriteWilsonLines() == 2) {
+        std::ofstream Outfile1;
         Outfile1.open(
             strVOne_name.str().c_str(), std::ios::out | std::ios::binary);
-        Outfile2.open(
-            strVTwo_name.str().c_str(), std::ios::out | std::ios::binary);
 
         double temp = param->getRapidity();
 
@@ -150,14 +134,7 @@ void Lattice::WriteInitialWilsonLines(
         Outfile1.write((char *)&a, sizeof(double));
         Outfile1.write((char *)&temp, sizeof(double));
 
-        Outfile2.write((char *)&N_, sizeof(int));
-        Outfile2.write((char *)&Nc_, sizeof(int));
-        Outfile2.write((char *)&L, sizeof(double));
-        Outfile2.write((char *)&a, sizeof(double));
-        Outfile2.write((char *)&temp, sizeof(double));
-
         double *val1 = new double[2];
-        double *val2 = new double[2];
 
         for (int ix = 0; ix < N_; ix++) {
             for (int iy = 0; iy < N_; iy++) {
@@ -165,19 +142,20 @@ void Lattice::WriteInitialWilsonLines(
                     for (int b = 0; b < 3; b++) {
                         int indx = N_ * iy + ix;
                         int SU3indx = a1 * Nc_ + b;
-                        val1[0] = (cells[indx]->getU()).getRe(SU3indx);
-                        val1[1] = (cells[indx]->getU()).getIm(SU3indx);
-                        val2[0] = (cells[indx]->getU2()).getRe(SU3indx);
-                        val2[1] = (cells[indx]->getU2()).getIm(SU3indx);
-
+                        if (iA == 1) {
+                            val1[0] = (cells[indx]->getU()).getRe(SU3indx);
+                            val1[1] = (cells[indx]->getU()).getIm(SU3indx);
+                        } else {
+                            val1[0] = (cells[indx]->getU2()).getRe(SU3indx);
+                            val1[1] = (cells[indx]->getU2()).getIm(SU3indx);
+                        }
                         Outfile1.write((char *)val1, 2 * sizeof(double));
-                        Outfile2.write((char *)val2, 2 * sizeof(double));
                     }
                 }
             }
         }
 
-        if (Outfile1.good() == false || Outfile2.good() == false) {
+        if (Outfile1.good() == false) {
             std::cerr << "#CRTICAL ERROR -- BINARY OUTPUT OF VECTOR "
                          "CURRENTS FAILED"
                       << std::endl;
@@ -185,20 +163,14 @@ void Lattice::WriteInitialWilsonLines(
         }
 
         delete[] val1;
-        delete[] val2;
 
         Outfile1.close();
-        Outfile2.close();
-        std::cout << "wrote " << strVOne_name.str() << " and "
-                  << strVTwo_name.str() << std::endl;
+        std::cout << "wrote " << strVOne_name.str() << std::endl;
     } else {
-        std::cerr << "# Unknwon option param->getWriteInitialWilsonLines()=="
-                  << param->getWriteInitialWilsonLines() << std::endl;
+        std::cerr << "# Unknwon option param->getWriteWilsonLines()=="
+                  << param->getWriteWilsonLines() << std::endl;
         exit(1);
     }
-
-    std::cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-              << ". " << std::endl;
 }
 
 // constructor
