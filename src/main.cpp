@@ -602,6 +602,7 @@ int readInput(
         setup->DFind(file_name, "x_projectile_jimwlk"));
     param->SetJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
     param->setJimwlk_x0(setup->DFind(file_name, "jimwlk_ic_x"));
+    param->setxSnapshotList(setup->ListFind(file_name, "xSnapshotList"));
 
     if (rank == 0) cout << "done." << endl;
 

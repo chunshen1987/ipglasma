@@ -69,6 +69,29 @@ string Setup::StringFind(string file_name, string st) {
     return (0);
 } /* StringFind */
 
+std::vector<double> Setup::ListFind(string fileName, string paramName) {
+    std::vector<double> varlist;
+    if (!IsFile(fileName)) {
+        cerr << "The input file named " << fileName << " is absent. Exiting."
+             << endl;
+        exit(1);
+    }
+    ifstream input(fileName.c_str());
+
+    string line;
+    while (std::getline(input, line)) {
+        if (line.find(paramName) != string::npos) {
+            std::stringstream lineStream(line);
+            std::string cell;
+            lineStream >> cell;
+            while (std::getline(lineStream, cell, ',')) {
+                varlist.push_back(std::stod(cell));
+            }
+        }
+    }
+    return varlist;
+}
+
 // reads a double using stringfind:
 double Setup::DFind(string file_name, string st) {
     // cout << "ccheck1" << endl;
