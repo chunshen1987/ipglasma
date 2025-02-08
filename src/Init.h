@@ -82,7 +82,6 @@ class Init {
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
     void setV(Lattice *lat, Parameters *param);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
-    void readV2(Lattice *lat, Parameters *param, Glauber *glauber);
 
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
