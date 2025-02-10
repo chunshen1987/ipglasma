@@ -358,14 +358,14 @@ int main(int argc, char *argv[]) {
             messager.info("Finish JIMWLK");
 
             if (param->getWriteWilsonLines() > 0) {
-                std::string fileHeader =
-                    ("Final_x_"
-                     + std::to_string(param->getJimwlk_x_projectile()) + "_");
-                lat.WriteWilsonLines(fileHeader, param, 1);  // nucleus A
-                fileHeader =
-                    ("Final_x_" + std::to_string(param->getJimwlk_x_target())
-                     + "_");
-                lat.WriteWilsonLines(fileHeader, param, 2);  // nucleus B
+                std::stringstream s1;
+                s1 << "Final_x_"
+                   << std::to_string(param->getJimwlk_x_projectile()) << "_";
+                lat.WriteWilsonLines(s1.str(), param, 1);  // nucleus A
+                std::stringstream s2;
+                s2 << "Final_x_" << std::to_string(param->getJimwlk_x_target())
+                   << "_";
+                lat.WriteWilsonLines(s2.str(), param, 2);  // nucleus B
             }
         }
 

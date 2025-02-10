@@ -1807,8 +1807,14 @@ void Init::setV(Lattice *lat, Parameters *param) {
 
     // output U
     if (param->getWriteWilsonLines() > 0) {
-        std::string wilsonfileHeader =
-            ("Initial_x_" + std::to_string(param->getJimwlk_x0()) + "_");
+        std::stringstream ss;
+        ss << "Initial_x_";
+        if (param->getUseJIMWLK()) {
+            ss << param->getJimwlk_x0() << "_";
+        } else {
+            ss << "0.001" << "_";
+        }
+        std::string wilsonfileHeader = ss.str();
         lat->WriteWilsonLines(wilsonfileHeader, param, 1);  // nucleus A
         lat->WriteWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
     }

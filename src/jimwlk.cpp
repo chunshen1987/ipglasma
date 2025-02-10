@@ -229,9 +229,9 @@ void JIMWLK::evolution() {
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    lat_ptr_->WriteWilsonLines(
-                        "JIMWLKSnapshot_x_" + std::to_string(xLoc) + "_",
-                        &param_, 1);
+                    std::stringstream ss;
+                    ss << "JIMWLKSnapshot_x_" << xLoc << "_";
+                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 1);
                     iSnapshot++;
                 }
             }
@@ -252,9 +252,9 @@ void JIMWLK::evolution() {
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    lat_ptr_->WriteWilsonLines(
-                        "JIMWLKSnapshot_x_" + std::to_string(xLoc) + "_",
-                        &param_, 2);
+                    std::stringstream ss;
+                    ss << "JIMWLKSnapshot_x_" << xLoc << "_";
+                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 2);
                     iSnapshot++;
                 }
             }
