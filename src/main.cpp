@@ -125,6 +125,7 @@ int main(int argc, char *argv[]) {
                  << " read from list.";
         messager.flush("info");
     }
+    random->setGammaIncCDF(param->getOmega());
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {
@@ -505,6 +506,7 @@ int readInput(
     param->setBGq(setup->DFind(file_name, "BGq"));
     param->setBGqVar(setup->DFind(file_name, "BGqVar"));
     param->setDqmin(setup->DFind(file_name, "dqMin"));
+    param->setOmega(setup->DFind(file_name, "omega"));
     param->setMuZero(setup->DFind(file_name, "muZero"));
     param->setc(setup->DFind(file_name, "c"));
     param->setSize(setup->IFind(file_name, "size"));

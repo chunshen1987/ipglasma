@@ -1,6 +1,8 @@
 
 #include "Random.h"
 
+#include <gsl/gsl_sf_gamma.h>
+
 #include <cmath>
 #include <iostream>
 
@@ -201,6 +203,44 @@ double Random::Gauss(double mean, double width) {
         iset = 0;
         return mean + width * gset;
     }
+}
+
+void Random::setGammaIncCDF(const double omega) {
+    gammaIncCDF_.clear();
+    gammaIncCDFx_.clear();
+    double xmax = std::max(5., 5. / omega);
+    int nX = 1000;
+    gammaIncCDF_.resize(nX, 0.);
+    gammaIncCDFx_.resize(nX, 0.);
+    double CDF = 0.;
+    for (int i = 0; i < nX; i++) {
+        double x = i * xmax / nX;
+        gammaIncCDFx_[i] = x;
+        gammaIncCDF_[i] = CDF;
+        CDF += gsl_sf_gamma_inc_Q(1. / omega, x);
+    }
+    for (int i = 0; i < nX; i++) {
+        gammaIncCDF_[i] /= CDF;
+    }
+}
+
+double Random::sampleGammaInc() {
+    double u = genrand64_real1();
+    int idx_l = 0;
+    int idx_h = gammaIncCDF_.size() - 1;
+    if (u > gammaIncCDF_[idx_h]) {
+        return gammaIncCDFx_[idx_h];
+    }
+    int idx_m = static_cast<int>((idx_l + idx_h) / 2);
+    while (idx_h - idx_l > 1) {
+        if (u < gammaIncCDF_[idx_m]) {
+            idx_h = idx_m;
+        } else {
+            idx_l = idx_m;
+        }
+        idx_m = static_cast<int>((idx_l + idx_h) / 2);
+    }
+    return gammaIncCDFx_[idx_m];
 }
 
 void Random::gslRandomInit(unsigned long long seed) {

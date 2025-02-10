@@ -2,6 +2,7 @@
 #define Random_h
 
 #include <random>
+#include <vector>
 
 #include "gsl/gsl_rng.h"
 
@@ -23,6 +24,8 @@ class Random {
     gsl_rng *gslRandom;
 
     std::mt19937_64 ranGen_;
+
+    std::vector<double> gammaIncCDF_, gammaIncCDFx_;
 
   public:
     Random() {
@@ -50,6 +53,9 @@ class Random {
     int Poisson(const double mean);
     double Gauss(double mean = 0., double width = 1.);
     double Gauss2(double mean, double sigma);
+
+    void setGammaIncCDF(const double omega);
+    double sampleGammaInc();
 };
 
 #endif

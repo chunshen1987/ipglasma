@@ -105,7 +105,8 @@ class Parameters {
     double BGq_;     // the mean width of the Gaussian describing the shape of
                      // a constituent quark in GeV^(-2)
     double BGqVar_;  // the variance of the Gaussian width describing the shape
-                     // of a constituent quark in GeV^(-4)
+    double omega_;
+    // of a constituent quark in GeV^(-4)
     double dq_min_;  // the minimum distance between valence quarks [fm]
     double muZero;   // mu_0 in the running coupling (makes it infrared finite)
     double c;  // determines how smooth the cutoff in the running coupling is
@@ -356,6 +357,8 @@ class Parameters {
     double getBGq() { return BGq_; }
     void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
     double getBGqVar() { return BGqVar_; }
+    void setOmega(double x) { omega_ = x; }
+    double getOmega() const { return omega_; }
     void setDqmin(double dq_min) { dq_min_ = dq_min; }
     double getDqmin() { return dq_min_; }
     void setMuZero(double x) { muZero = x; }

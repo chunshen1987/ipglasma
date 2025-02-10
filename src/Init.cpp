@@ -606,14 +606,20 @@ void Init::samplePartonPositions(
     const int Nq = sampleNumberOfPartons(random, param);
     const double dq_min = param->getDqmin();  // fm
     const double dq_min_sq = dq_min * dq_min;
+    const double omega = param->getOmega();
 
     vector<double> r_array(Nq, 0.);
     BGq_array.resize(Nq, BGq);
     for (int iq = 0; iq < Nq; iq++) {
-        double xq = sqrtBG * random->Gauss();
-        double yq = sqrtBG * random->Gauss();
-        double zq = sqrtBG * random->Gauss();
-        r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
+        if (std::abs(omega - 1) < 1e-8) {
+            double xq = sqrtBG * random->Gauss();
+            double yq = sqrtBG * random->Gauss();
+            double zq = sqrtBG * random->Gauss();
+            r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
+        } else {
+            double bperp = sqrtBG * sqrt(omega * random->sampleGammaInc());
+            r_array[iq] = bperp;  // bperp in 2D (asuume z = 0)
+        }
     }
     std::sort(r_array.begin(), r_array.end());
 
@@ -630,9 +636,15 @@ void Init::samplePartonPositions(
             reject_flag = 0;
             double phi = 2. * M_PI * random->genrand64_real2();
             double theta = acos(1. - 2. * random->genrand64_real2());
-            x_i = r_i * sin(theta) * cos(phi);
-            y_i = r_i * sin(theta) * sin(phi);
-            z_i = r_i * cos(theta);
+            if (std::abs(omega - 1) < 1e-8) {
+                x_i = r_i * sin(theta) * cos(phi);
+                y_i = r_i * sin(theta) * sin(phi);
+                z_i = r_i * cos(theta);
+            } else {
+                x_i = r_i * cos(phi);
+                y_i = r_i * sin(phi);
+                z_i = 0.;  // assume z=0
+            }
             for (int j = i - 1; j >= 0; j--) {
                 if ((r_i - r_array[j]) * (r_i - r_array[j]) > dq_min_sq) break;
                 double dsq =
@@ -669,8 +681,8 @@ void Init::samplePartonPositions(
     }
 }
 
-// Q_s as a function of \sum T_p and y (new in this version of the code - v1.2
-// and up)
+// Q_s as a function of \sum T_p and y (new in this version of the code -
+// v1.2 and up)
 double Init::getNuclearQs2(double T, double y) {
     double value, fracy, fracT, QsYdown, QsYup;
     int posy, check = 0;
@@ -678,7 +690,8 @@ double Init::getNuclearQs2(double T, double y) {
     posy = static_cast<int>(floor(y / deltaYNuc + 0.0000001));
 
     if (y > iymaxNuc * deltaYNuc) {
-        cout << " [Init:getNuclearQs2]:ERROR: y out of range. Maximum y value "
+        cout << " [Init:getNuclearQs2]:ERROR: y out of range. Maximum y "
+                "value "
                 "is "
              << iymaxNuc * deltaYNuc << ", you used " << y << ". Exiting."
              << endl;
@@ -689,7 +702,8 @@ double Init::getNuclearQs2(double T, double y) {
     if (T > Tlist[iTpmax - 1]) {
         cerr << "T=" << T << ", maximal T in table=" << Tlist[iTpmax - 1]
              << endl;
-        cerr << " [Init:getNuclearQs2]:WARNING: out of range. Using maximal T "
+        cerr << " [Init:getNuclearQs2]:WARNING: out of range. Using "
+                "maximal T "
                 "in "
                 "table."
              << endl;
@@ -736,10 +750,9 @@ double Init::getNuclearQs2(double T, double y) {
     return value;
 }
 
-// set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using Q_s(b,y)
-// prop to g^mu(b,y)
-// Also compute N_part using Glauber
-// If param->getwhich_stage() == 2, then here we shift nuclei back to b=0 for
+// set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
+// Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber If
+// param->getwhich_stage() == 2, then here we shift nuclei back to b=0 for
 // JIMLWK evolution (to be shifted back to b after JIMLWK in readV2())
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
@@ -756,8 +769,8 @@ void Init::setColorChargeDensity(
     if (param->getUsePseudoRapidity() == 0) {
         rapidity = param->getRapidity();
     } else {
-        // when using pseudorapidity as input convert to rapidity here. later
-        // include Jacobian in multiplicity and energy
+        // when using pseudorapidity as input convert to rapidity here.
+        // later include Jacobian in multiplicity and energy
         cout << "Using pseudorapidity " << param->getRapidity() << endl;
         double m = param->getJacobianm();  // in GeV
         double P =
@@ -1238,8 +1251,8 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
     const double a = L / N;  // lattice spacing in fm
 
-    // Determine Npart, Ncoll. Do this only during the first stage, as in the
-    // 2nd stage nuclei are shifted to b=0
+    // Determine Npart, Ncoll. Do this only during the first stage, as in
+    // the 2nd stage nuclei are shifted to b=0
     if (param->getUseSmoothNucleus() == 0) {
         stringstream strNcoll_name;
         strNcoll_name << "NcollList" << param->getEventId() << ".dat";
@@ -1608,7 +1621,8 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
     ofstream foutNEst(NEst_name.c_str(), std::ios::out);
 
-    foutNEst << "#Q_s^2(min) S_T  " << "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T "
+    foutNEst << "#Q_s^2(min) S_T  " << "Q_s^2(avg) S_T  "
+             << "Q_s^2(max) S_T "
              << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
     foutNEst << averageQs2min2 * a * a / hbarc / hbarc << "         "
              << averageQs2Avg * a * a / hbarc / hbarc
@@ -1825,8 +1839,8 @@ void Init::setV(Lattice *lat, Parameters *param) {
 }
 
 void Init::readV2(Lattice *lat, Parameters *param, Glauber *glauber) {
-    // "Read" Wilson lines from the Lattice object, shift those according to the
-    // impact parameter
+    // "Read" Wilson lines from the Lattice object, shift those according to
+    // the impact parameter
     int AA1, AA2;
     // int check=0;
     if (param->getNucleonPositionsFromFile() == 0) {
@@ -1960,9 +1974,9 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     // format 1 = plain text, 2 = binary
 
     if (format > 2 or format < 1) {
-        messager
-            << "Unknown format " << format
-            << " when reading the initial Wilson lines, supported formats: 1,2";
+        messager << "Unknown format " << format
+                 << " when reading the initial Wilson lines, supported "
+                    "formats: 1,2";
         messager.flush("info");
         exit(1);
     }
@@ -2134,7 +2148,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 if (INPUT_CTR % 2 == 0)  // this is the real part
                 {
                     re = ValueBuffer;
-                } else  // this is the imaginary part, write then to variable //
+                } else  // this is the imaginary part, write then to
+                        // variable //
                 {
                     im = ValueBuffer;
                     int TEMPINDX = ((INPUT_CTR - 1) / 2);
