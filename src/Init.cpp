@@ -2398,17 +2398,17 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
         int ixB = static_cast<int>((xB + L / 2.) / a);
         int iyB = static_cast<int>((yB + L / 2.) / a);
 
-        int posA = ixA * N + iyA;
-        if (posA >= 0 && posA < N * N) {
-            lat->cells[ipos]->setU(lat_tmp.cells[posA]->getbuffer1());
-        } else {
+        if (ixA < 0 || ixA >= N || iyA < 0 || iyA >= N) {
             lat->cells[ipos]->setU(one_);
-        }
-        int posB = ixB * N + iyB;
-        if (posB >= 0 && posB < N * N) {
-            lat->cells[ipos]->setU2(lat_tmp.cells[posB]->getbuffer2());
         } else {
+            int posA = ixA * N + iyA;
+            lat->cells[ipos]->setU(lat_tmp.cells[posA]->getbuffer1());
+        }
+        if (ixB < 0 || ixB >= N || iyB < 0 || iyB >= N) {
             lat->cells[ipos]->setU2(one_);
+        } else {
+            int posB = ixB * N + iyB;
+            lat->cells[ipos]->setU2(lat_tmp.cells[posB]->getbuffer2());
         }
     }
 }
