@@ -1820,7 +1820,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
     delete[] rhoACoeff;
 
     // output U
-    if (param->getWriteWilsonLines() > 0) {
+    if (param->getWriteWilsonLines() > 0 && param->getSaveSnapshots()) {
         std::stringstream ss;
         ss << "Initial_x_";
         if (param->getUseJIMWLK()) {
