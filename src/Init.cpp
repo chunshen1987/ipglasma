@@ -547,12 +547,14 @@ void Init::readInNucleusConfigs(
     if (nucleusA == 3) {
         fileName = "He3.bin.in";
     } else if (nucleusA == 12) {
+        fileName = "C12_VMC.bin.in";
         if (lightNucleusOption == 2) {
             fileName = "C12_VMC.bin.in";
         } else if (lightNucleusOption == 3) {
             fileName = "C12_alphaCluster.bin.in";
         }
     } else if (nucleusA == 16) {
+        fileName = "O16_VMC.bin.in";
         if (lightNucleusOption == 2) {
             fileName = "O16_VMC.bin.in";
         } else if (lightNucleusOption == 3) {
