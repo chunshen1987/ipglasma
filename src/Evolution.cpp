@@ -4222,8 +4222,12 @@ int Evolution::correlations(
     const int phiBins = 16;
     double n[bins][phiBins];  // |k_T|, phi array
     //  double n2[bins][phiBins]; // |k_T|, phi array
-    double nkxky[N][N];  // kx, ky array
-    double nk[bins];     //|k_T| array
+    std::vector<std::vector<double>> nkxky;  // kx, ky array
+    nkxky.resize(N);
+    for (int i = 0; i < N; i++) {
+        nkxky[i].resize(N, 0);
+    }
+    double nk[bins];  //|k_T| array
     // double nNoMixedTerms[bins][phiBins]; //|k_T|, phi array
     // double nkNoMixedTerms[bins]; //|k_T| array
     // int counter[bins][phiBins];

@@ -546,33 +546,50 @@ void Init::readInNucleusConfigs(
     bool readFlag = true;
     if (nucleusA == 3) {
         fileName = "He3.bin.in";
+        if (lightNucleusOption == 1) fileName = "triton.bin.in";
+    } else if (nucleusA == 4) {
+        fileName = "He4.bin.in";
     } else if (nucleusA == 12) {
         fileName = "C12_VMC.bin.in";
-        if (lightNucleusOption == 2) {
-            fileName = "C12_VMC.bin.in";
-        } else if (lightNucleusOption == 3) {
-            fileName = "C12_alphaCluster.bin.in";
-        }
+        if (lightNucleusOption == 1) fileName = "C12_alphaCluster.bin.in";
     } else if (nucleusA == 16) {
         fileName = "O16_VMC.bin.in";
-        if (lightNucleusOption == 2) {
-            fileName = "O16_VMC.bin.in";
-        } else if (lightNucleusOption == 3) {
+        if (lightNucleusOption == 1) {
             fileName = "O16_alphaCluster.bin.in";
+        } else if (lightNucleusOption == 2) {
+            fileName = "O16_PGCM_clustered_dmin0.bin.in";
+        } else if (lightNucleusOption == 3) {
+            fileName = "O16_PGCM_uniform_dmin0.bin.in";
         } else if (lightNucleusOption == 4) {
-            fileName = "O16_PGCM.bin.in";
+            fileName = "O16_NLEFT_dmin0.5fm_positiveweights.bin.in";
         } else if (lightNucleusOption == 5) {
-            fileName = "O16_NLEFT.bin.in";
+            fileName = "O16_NLEFT_dmin0.5fm_negativeweights.bin.in";
         }
     } else if (nucleusA == 20) {
-        fileName = "Ne20_PGCM.bin.in";
+        fileName = "Ne20_PGCM_clustered_dmin0.bin.in";
+        if (lightNucleusOption == 3) {
+            fileName = "Ne20_PGCM_uniform_dmin0.bin.in";
+        } else if (lightNucleusOption == 4) {
+            fileName = "Ne20_NLEFT_dmin0.5fm_positiveweights.bin.in";
+        } else if (lightNucleusOption == 5) {
+            fileName = "Ne20_NLEFT_dmin0.5fm_negativeweights.bin.in";
+        }
     } else if (nucleusA == 40) {
         fileName = "Ar40_VMC.bin.in";
+    } else if (nucleusA == 197) {
+        fileName = "Au197.bin.in";
+    } else if (nucleusA == 208) {
+        fileName = "Pb208.bin.in";
     } else {
         readFlag = false;
     }
 
     if (!readFlag) return;
+
+    int Nentry = 3;
+    if (nucleusA == 197 || nucleusA == 208) {
+        Nentry = 4;
+    }
 
     fileName = path + fileName;
     messager << "read in nucleus configurations from " << fileName;
@@ -581,7 +598,7 @@ void Init::readInNucleusConfigs(
     while (true) {
         vector<float> tempPos;
         for (int i = 0; i < nucleusA; i++) {
-            for (int j = 0; j < 3; j++) {
+            for (int j = 0; j < Nentry; j++) {
                 float temp;
                 inFile.read(reinterpret_cast<char *>(&temp), sizeof(float));
                 tempPos.push_back(temp);
