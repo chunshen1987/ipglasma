@@ -2360,12 +2360,14 @@ void Init::init(
         readNuclearQs(param);
     }
 
-    readInNucleusConfigs(
-        static_cast<int>(glauber->nucleusA1()), param->getlightNucleusOption(),
-        nucleonPosArrA_);
-    readInNucleusConfigs(
-        static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
-        nucleonPosArrB_);
+    if (param->getNucleonPositionsFromFile() == 1) {
+        readInNucleusConfigs(
+            static_cast<int>(glauber->nucleusA1()),
+            param->getlightNucleusOption(), nucleonPosArrA_);
+        readInNucleusConfigs(
+            static_cast<int>(glauber->nucleusA2()),
+            param->getlightNucleusOption(), nucleonPosArrB_);
+    }
 
     if (init_method == READ_WLINE_BINARY or init_method == READ_WLINE_TEXT) {
         // to read Wilson lines from file
