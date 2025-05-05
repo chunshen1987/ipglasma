@@ -405,7 +405,9 @@ void MyEigen::flowVelocity4D(
                     x = -hL / 2. + ha * ix;
                     y = -hL / 2. + ha * iy;
 
-                    if (abs(x) < L / 2. && abs(y) < L / 2.) {
+                    if (std::abs(x) < (L / 2. - 0.5)
+                        && std::abs(y) < (L / 2. - 0.5)) {
+                        // if (std::abs(x) < L / 2. && std::abs(y) < L / 2.) {
                         xpos = static_cast<int>(
                             floor((x + L / 2.) / a + 0.0000000001));
                         ypos = static_cast<int>(
@@ -428,6 +430,7 @@ void MyEigen::flowVelocity4D(
                         // yhigh = -L/2.+a*yposUp;
 
                         fracx = (x - xlow) / ha;
+                        fracy = (y - ylow) / ha;
 
                         pos1 = xpos * N + ypos;
                         pos2 = xposUp * N + ypos;
@@ -451,8 +454,6 @@ void MyEigen::flowVelocity4D(
                                  + fracx * abs(lat->cells[pos4]->getEpsilon());
                         else
                             x2 = 0.;
-
-                        fracy = (y - ylow) / ha;
 
                         resultE = (1. - fracy) * x1 + fracy * x2;
 
