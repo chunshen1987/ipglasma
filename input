@@ -5,7 +5,7 @@ size 600
 L 40
 Nc 3
 m 0.4
-rmax 1000.
+rmax 10000000.
 UVdamp 0.
 Jacobianm 0.35
 g 1.
@@ -18,7 +18,7 @@ dqMin 0.
 omega 1.
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
-useConstituentQuarkProton 3
+useConstituentQuarkProton 0
 NqFluc 0.0
 runningCoupling 0
 muZero 0.3
@@ -26,17 +26,17 @@ c 0.2
 g2mu 0.1
 useFatTails 0
 tDistNu 3
-smearQs 1
-smearingWidth 0.7
+smearQs 0
+smearingWidth 0.6
 protonAnisotropy 0
-roots 5020
+roots 7000
 usePseudoRapidity 0
 Rapidity 0.
 useFluctuatingx 0
 xFromThisFactorTimesQs 1
 useNucleus 1
 useGaussian 0
-setWSDeformParams 1
+setWSDeformParams 0
 R_WS 6.6
 a_WS 0.52
 beta2 0.28
@@ -68,10 +68,10 @@ rotateReactionPlane 1
 lightNucleusOption 5
 useFixedNpart 0
 averageOverThisManyNuclei 1
-SigmaNN 67.
+SigmaNN 73.
 gaussianWounding 1
 inverseQsForMaxTime 0
-maxtime 0.4
+maxtime 0.1
 dtau 0.1
 LOutput 30
 sizeOutput 340
@@ -95,3 +95,4 @@ m_jimwlk 0.4
 saveSnapshots 1
 xSnapshotList 5e-3,2e-3,0.0001,0.00005,0.00001
 EndOfFile
+BOB
