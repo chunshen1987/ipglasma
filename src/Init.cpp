@@ -1139,6 +1139,11 @@ void Init::setColorChargeDensity(
             }
         }
 
+        if (param->useJIMLWK() == 1) {
+            // always assgin color charge density for whole lattice
+            check = 2;
+        }
+
         double exponent = 5.6;  // see 1212.2974 Eq. (17)
         double xVal = 0.;
         if (check == 2) {
