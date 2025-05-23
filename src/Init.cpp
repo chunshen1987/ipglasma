@@ -1139,7 +1139,7 @@ void Init::setColorChargeDensity(
             }
         }
 
-        if (param->useJIMLWK() == 1) {
+        if (param->getUseJIMWLK() == 1) {
             // always assgin color charge density for whole lattice
             check = 2;
         }
