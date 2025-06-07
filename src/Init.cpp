@@ -576,6 +576,7 @@ void Init::readInNucleusConfigs(
         }
     } else if (nucleusA == 40) {
         fileName = "Ar40_VMC.bin.in";
+        if (lightNucleusOption == 4) fileName = "Ar40_NLEFT.bin.in";
     } else if (nucleusA == 197) {
         fileName = "Au197.bin.in";
     } else if (nucleusA == 208) {
