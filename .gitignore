@@ -14,3 +14,4 @@ ipglasma
 Tmunu
 *.dylib
 .DS_Store
+*.bin.in
