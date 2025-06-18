@@ -785,28 +785,40 @@ void Init::setColorChargeDensity(
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
-    double rapidity = 0.;
+    double rapidityA = 0.;
+    double rapidityB = 0.;
     if (param->getUsePseudoRapidity() == 0) {
-        rapidity = param->getRapidity();
+        rapidityA = param->getRapidityA();
+        rapidityB = param->getRapidityB();
     } else {
         // when using pseudorapidity as input convert to rapidity here.
         // later include Jacobian in multiplicity and energy
-        cout << "Using pseudorapidity " << param->getRapidity() << endl;
+        cout << "Using pseudorapidity " << param->getRapidityA() << ", "
+             << param->getRapidityB() << endl;
         double m = param->getJacobianm();  // in GeV
         double P =
             0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
-        rapidity =
+        rapidityA =
             0.5
             * log(
-                sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P))
-                + sinh(param->getRapidity())
+                sqrt(pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
+                + sinh(param->getRapidityA())
                       / (sqrt(
-                             pow(cosh(param->getRapidity()), 2.)
+                             pow(cosh(param->getRapidityA()), 2.)
                              + m * m / (P * P))
-                         - sinh(param->getRapidity())));
-        cout << "Corresponds to rapidity " << rapidity << endl;
+                         - sinh(param->getRapidityA())));
+        rapidityB =
+            0.5
+            * log(
+                sqrt(pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
+                + sinh(param->getRapidityB())
+                      / (sqrt(
+                             pow(cosh(param->getRapidityB()), 2.)
+                             + m * m / (P * P))
+                         - sinh(param->getRapidityB())));
+        cout << "Corresponds to rapidity " << rapidityA << ", " << rapidityB
+             << endl;
     }
-    double yIn = rapidity;  // param->getRapidity();
 
     double nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
@@ -1088,8 +1100,6 @@ void Init::setColorChargeDensity(
         int ix = ipos / N;
         int iy = ipos % N;
 
-        double localrapidity = rapidity;
-        double Ydeviation = 10000;
         double QsA = 1;
         double QsB = 1;
         int check = 0;
@@ -1149,6 +1159,9 @@ void Init::setColorChargeDensity(
         double xVal = 0.;
         if (check == 2) {
             if (param->getUseFluctuatingx() == 1) {
+                double localrapidity = rapidityA;
+                double yIn = rapidityA;
+                double Ydeviation = 10000;
                 // iterative loops here to determine the fluctuating Y
                 while (abs(Ydeviation) > 0.001) {
                     if (localrapidity >= 0) {
@@ -1194,7 +1207,8 @@ void Init::setColorChargeDensity(
                     lat->cells[ipos]->setg2mu2A(0.);
                 }
 
-                localrapidity = rapidity;
+                localrapidity = rapidityB;
+                yIn = rapidityB;
                 Ydeviation = 10000;
                 while (abs(Ydeviation) > 0.001) {
                     if (localrapidity >= 0)
@@ -1240,14 +1254,14 @@ void Init::setColorChargeDensity(
             } else {
                 // nucleus A
                 lat->cells[ipos]->setg2mu2A(
-                    getNuclearQs2(lat->cells[ipos]->getTpA(), localrapidity)
+                    getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
                     / param->getQsmuRatio() / param->getQsmuRatio() * a * a
                     / hbarc / hbarc / param->getg()
                     / param->getg());  // lattice units? check
 
                 // nucleus B
                 lat->cells[ipos]->setg2mu2B(
-                    getNuclearQs2(lat->cells[ipos]->getTpB(), localrapidity)
+                    getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
                     / param->getQsmuRatioB() / param->getQsmuRatioB() * a * a
                     / hbarc / hbarc / param->getg() / param->getg());
             }

@@ -550,7 +550,8 @@ int readInput(
         setup->IFind(file_name, "computeGluonMultiplicity"));
     param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
     param->setUsePseudoRapidity(setup->DFind(file_name, "usePseudoRapidity"));
-    param->setRapidity(setup->DFind(file_name, "Rapidity"));
+    param->setRapidityA(setup->DFind(file_name, "RapidityA"));
+    param->setRapidityB(setup->DFind(file_name, "RapidityB"));
     param->setUseNucleus(setup->IFind(file_name, "useNucleus"));
     param->setUseGaussian(setup->IFind(file_name, "useGaussian"));
     param->setlightNucleusOption(setup->IFind(file_name, "lightNucleusOption"));

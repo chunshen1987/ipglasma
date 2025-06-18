@@ -68,8 +68,10 @@ class Parameters {
                         // nucleus A
     double QsmuRatioB;  // ratio between Qs and mu: Q_s = QsmuRatio * g^2 mu for
                         // nucleus B
-    double rapidity;  // rapidity to use when getting Q_s from IPSat. Basically
-                      // to pick x for now
+    double rapidityA_;  // rapidity to use when getting Q_s from IPSat.
+                        // Basically to pick x for now
+    double rapidityB_;  // rapidity to use when getting Q_s from IPSat.
+                        // Basically to pick x for now
     int usePseudoRapidity;  // if selected (1) the variable 'rapidity' will
                             // contain the pseudorapidity and the right
                             // conversion will be done (incl. Jacobian)
@@ -319,8 +321,11 @@ class Parameters {
     double getQsmuRatio() { return QsmuRatio; }
     void setQsmuRatioB(double x) { QsmuRatioB = x; }
     double getQsmuRatioB() { return QsmuRatioB; }
-    void setRapidity(double x) { rapidity = x; }
-    double getRapidity() { return rapidity; }
+    void setRapidityA(double x) { rapidityA_ = x; }
+    double getRapidityA() const { return rapidityA_; }
+    void setRapidityB(double x) { rapidityB_ = x; }
+    double getRapidityB() const { return rapidityB_; }
+    double getRapidity() const { return (rapidityA_ + rapidityB_) / 2.; }
     void setMaxtime(double x) { maxtime = x; }
     double getMaxtime() { return maxtime; }
     void setdtau(double x) { dtau = x; }

@@ -125,7 +125,8 @@ void Lattice::WriteWilsonLines(
         Outfile1.open(
             strVOne_name.str().c_str(), std::ios::out | std::ios::binary);
 
-        double temp = param->getRapidity();
+        double temp = param->getRapidityA();
+        if (iA == 2) temp = param->getRapidityB();
 
         // print header ------------- //
         Outfile1.write((char *)&N_, sizeof(int));

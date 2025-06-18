@@ -31,7 +31,8 @@ smearingWidth 0.6
 protonAnisotropy 0
 roots 7000
 usePseudoRapidity 0
-Rapidity 0.
+RapidityA 0.
+RapidityB 0.
 useFluctuatingx 0
 xFromThisFactorTimesQs 1
 useNucleus 1
