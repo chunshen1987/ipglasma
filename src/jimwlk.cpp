@@ -18,7 +18,7 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     nn_[0] = param_.getSize();
     nn_[1] = param_.getSize();
 
-    fft_ptr_ = std::make_shared<FFT>(nn_);
+    fft_ptr_ = std::make_shared<FFT>(nn_, Nc_);
 
     group_ptr_ = group;
     random_ptr_ = random;
@@ -266,6 +266,8 @@ void JIMWLK::evolution() {
 void JIMWLK::evolutionStep() {
     const complex<double> I(0., 1.);
     const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
+    const complex<double> ids_sqrt(0., ds_sqrt);
+    const complex<double> neg_ids_sqrt(0., -ds_sqrt);
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
@@ -277,10 +279,11 @@ void JIMWLK::evolutionStep() {
 
     // the local xi now contains the Fourier transform of xi,
     // while the original xi is stored in the array xi2
-    fft_ptr_->fftnArray(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
+    fft_ptr_->fftnArrayMany(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
 
     // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
     //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
         for (int n = 0; n < Nc2m1_; n++) {
             CKxi_[i][n] = (*K_[i]).at(0) * xi_[i][n]
@@ -290,44 +293,48 @@ void JIMWLK::evolutionStep() {
     }
 
     // now CKxi contains C(K_i,xi_i^a) - it is a vector with a components
-    fft_ptr_->fftnArray(CKxi_, CKxi_, nn_, -1, Nc2m1_);
+    fft_ptr_->fftnArrayMany(CKxi_, CKxi_, nn_, -1, Nc2m1_);
 
+    // Compute V * xi * V^dagger for x and y components
+    // Hoist U and U^dagger outside the color loop; compute U*T_a*Udagger once
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
         *VxsiVx_[i] = zero_;
         *VxsiVy_[i] = zero_;
+        const Matrix &U_ref = lat_ptr_->cells[i]->getU();
+        Matrix Uconj = U_ref;
+        Uconj.conjg();
         for (int a = 0; a < Nc2m1_; a++) {
-            Matrix Uconj = lat_ptr_->cells[i]->getU();
-            Uconj.conjg();
-            *VxsiVx_[i] = (*VxsiVx_[i])
-                          + xi2_[i][a] * lat_ptr_->cells[i]->getU()
-                                * group_ptr_->getT(a) * Uconj;
-            *VxsiVy_[i] = (*VxsiVy_[i])
-                          + xi2_[i][a + Nc2m1_] * lat_ptr_->cells[i]->getU()
-                                * group_ptr_->getT(a) * Uconj;
+            // Compute U * T_a * U^dagger once, reuse for x and y
+            Matrix UTU = U_ref * group_ptr_->getT(a) * Uconj;
+            *VxsiVx_[i] += xi2_[i][a] * UTU;
+            *VxsiVy_[i] += xi2_[i][a + Nc2m1_] * UTU;
         }
     }
 
-    // FFT V xi V
-    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, 1);
-    fft_ptr_->fftn(VxsiVy_, VxsiVy_, nn_, 1);
+    // Batched FFT of V*xi*V^dagger fields
+    fft_ptr_->fftnMany(VxsiVx_, VxsiVx_, nn_, 1);
+    fft_ptr_->fftnMany(VxsiVy_, VxsiVy_, nn_, 1);
 
+    // Multiply with kernel in Fourier space
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
-        *VxsiVx_[i] = (*K_[i])[0] * (*VxsiVx_[i]) + (*K_[i])[1] * (*VxsiVy_[i]);
+        *VxsiVx_[i] *= (*K_[i])[0];
+        *VxsiVx_[i] += (*K_[i])[1] * (*VxsiVy_[i]);
     }
 
-    // FFT back
-    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, -1);
+    // Batched FFT back
+    fft_ptr_->fftnMany(VxsiVx_, VxsiVx_, nn_, -1);
 
-    // Evolve Matrix
+    // Evolve Wilson lines
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
-        Matrix left(Nc_, 0.);
-        left = -I * ds_sqrt * (*VxsiVx_[i]);
+        Matrix left = neg_ids_sqrt * (*VxsiVx_[i]);
         Matrix right(Nc_, 0.);
-
         for (int a = 0; a < Nc2m1_; a++) {
-            right = right + real(CKxi_[i][a]) * group_ptr_->getT(a);
+            right += real(CKxi_[i][a]) * group_ptr_->getT(a);
         }
-        right = I * ds_sqrt * right;
+        right *= ids_sqrt;
         lat_ptr_->cells[i]->setU(
             left.expm() * lat_ptr_->cells[i]->getU() * right.expm());
     }
@@ -336,6 +343,8 @@ void JIMWLK::evolutionStep() {
 void JIMWLK::evolutionStep2() {
     const complex<double> I(0., 1.);
     const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
+    const complex<double> ids_sqrt(0., ds_sqrt);
+    const complex<double> neg_ids_sqrt(0., -ds_sqrt);
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
@@ -347,10 +356,11 @@ void JIMWLK::evolutionStep2() {
 
     // the local xi now contains the Fourier transform of xi,
     // while the original xi is stored in the array xi2
-    fft_ptr_->fftnArray(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
+    fft_ptr_->fftnArrayMany(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
 
     // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
     //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
         for (int n = 0; n < Nc2m1_; n++) {
             CKxi_[i][n] = (*K_[i]).at(0) * xi_[i][n]
@@ -360,44 +370,46 @@ void JIMWLK::evolutionStep2() {
     }
 
     // now CKxi contains C(K_i,xi_i^a) - it is a vector with a components
-    fft_ptr_->fftnArray(CKxi_, CKxi_, nn_, -1, Nc2m1_);
+    fft_ptr_->fftnArrayMany(CKxi_, CKxi_, nn_, -1, Nc2m1_);
 
+    // Compute V * xi * V^dagger for x and y components
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
         *VxsiVx_[i] = zero_;
         *VxsiVy_[i] = zero_;
+        const Matrix &U_ref = lat_ptr_->cells[i]->getU2();
+        Matrix Uconj = U_ref;
+        Uconj.conjg();
         for (int a = 0; a < Nc2m1_; a++) {
-            Matrix Uconj = lat_ptr_->cells[i]->getU2();
-            Uconj.conjg();
-            *VxsiVx_[i] = (*VxsiVx_[i])
-                          + xi2_[i][a] * lat_ptr_->cells[i]->getU2()
-                                * group_ptr_->getT(a) * Uconj;
-            *VxsiVy_[i] = (*VxsiVy_[i])
-                          + xi2_[i][a + Nc2m1_] * lat_ptr_->cells[i]->getU2()
-                                * group_ptr_->getT(a) * Uconj;
+            Matrix UTU = U_ref * group_ptr_->getT(a) * Uconj;
+            *VxsiVx_[i] += xi2_[i][a] * UTU;
+            *VxsiVy_[i] += xi2_[i][a + Nc2m1_] * UTU;
         }
     }
 
-    // FFT V xi V
-    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, 1);
-    fft_ptr_->fftn(VxsiVy_, VxsiVy_, nn_, 1);
+    // Batched FFT of V*xi*V^dagger fields
+    fft_ptr_->fftnMany(VxsiVx_, VxsiVx_, nn_, 1);
+    fft_ptr_->fftnMany(VxsiVy_, VxsiVy_, nn_, 1);
 
+    // Multiply with kernel in Fourier space
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
-        *VxsiVx_[i] = (*K_[i])[0] * (*VxsiVx_[i]) + (*K_[i])[1] * (*VxsiVy_[i]);
+        *VxsiVx_[i] *= (*K_[i])[0];
+        *VxsiVx_[i] += (*K_[i])[1] * (*VxsiVy_[i]);
     }
 
-    // FFT back
-    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, -1);
+    // Batched FFT back
+    fft_ptr_->fftnMany(VxsiVx_, VxsiVx_, nn_, -1);
 
-    // Evolve Matrix
+    // Evolve Wilson lines
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < Ncells_; i++) {
-        Matrix left(Nc_, 0.);
-        left = -I * ds_sqrt * (*VxsiVx_[i]);
+        Matrix left = neg_ids_sqrt * (*VxsiVx_[i]);
         Matrix right(Nc_, 0.);
-
         for (int a = 0; a < Nc2m1_; a++) {
-            right = right + real(CKxi_[i][a]) * group_ptr_->getT(a);
+            right += real(CKxi_[i][a]) * group_ptr_->getT(a);
         }
-        right = I * ds_sqrt * right;
+        right *= ids_sqrt;
         lat_ptr_->cells[i]->setU2(
             left.expm() * lat_ptr_->cells[i]->getU2() * right.expm());
     }

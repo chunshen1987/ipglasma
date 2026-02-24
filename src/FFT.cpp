@@ -381,30 +381,29 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
     mDim *= mDim;
     // ndim is the dimension of the FFT (always 2 here)
 
-    // for each component of the matrix fill the input array for the FFT (resort
-    // as you fill in)
-
-    //    cout << "mDim=" << mDim << endl;
+    // for each component of the matrix fill the inputMany array for the
+    // batched FFT (resort as you fill in)
 
     for (int k = 0; k < mDim; k++) {
+        int k_offset = k * ntot;
         //	oo   ->  xo
         //      ox       oo
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
+                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = data[pos]->getRe(k);
+                inputMany[newpos][1] = data[pos]->getIm(k);
             }
         }
         //	xo   ->  oo
         //      oo       ox
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j + k;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
+                pos = i * nn[1] + j;
+                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k_offset;
+                inputMany[newpos][0] = data[pos]->getRe(k);
+                inputMany[newpos][1] = data[pos]->getIm(k);
             }
         }
         //	ox   ->  oo
@@ -412,9 +411,9 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
+                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = data[pos]->getRe(k);
+                inputMany[newpos][1] = data[pos]->getIm(k);
             }
         }
         //	oo   ->  ox
@@ -422,9 +421,9 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
+                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = data[pos]->getRe(k);
+                inputMany[newpos][1] = data[pos]->getIm(k);
             }
         }
     }
@@ -436,21 +435,23 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
 
     // if this is inverse transform, normalize.
     if (isign == -1) {
-        for (unsigned i = 0; i < ntot * 9; i++) {
-            output[i][0] /= static_cast<double>(ntot);
-            output[i][1] /= static_cast<double>(ntot);
+        const double inv_ntot = 1.0 / static_cast<double>(ntot);
+        for (unsigned i = 0; i < ntot * static_cast<unsigned>(mDim); i++) {
+            outputMany[i][0] *= inv_ntot;
+            outputMany[i][1] *= inv_ntot;
         }
     }
 
     for (int k = 0; k < mDim; k++) {
+        int k_offset = k * ntot;
         //	oo   ->  xo
         //      ox       oo
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
+                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                outdata[pos]->setRe(k, outputMany[newpos][0]);
+                outdata[pos]->setIm(k, outputMany[newpos][1]);
             }
         }
         //	xo   ->  oo
@@ -458,9 +459,9 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
+                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k_offset;
+                outdata[pos]->setRe(k, outputMany[newpos][0]);
+                outdata[pos]->setIm(k, outputMany[newpos][1]);
             }
         }
         //	ox   ->  oo
@@ -468,9 +469,9 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
+                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k_offset;
+                outdata[pos]->setRe(k, outputMany[newpos][0]);
+                outdata[pos]->setIm(k, outputMany[newpos][1]);
             }
         }
         //	oo   ->  ox
@@ -479,14 +480,12 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
                 pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
+                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                outdata[pos]->setRe(k, outputMany[newpos][0]);
+                outdata[pos]->setIm(k, outputMany[newpos][1]);
             }
         }
     }
-
-    //------
 }
 
 void FFT::fftnComplex(
@@ -603,6 +602,115 @@ void FFT::fftnComplex(
                 outdata[pos] =
                     complex<double>(output[newpos][0], output[newpos][1]);
                 //	outdata[pos]->setIm(k,output[newpos][1]);
+            }
+        }
+    }
+}
+
+// Batched FFT for complex<double>** arrays.
+// Uses pre-created "many" plans for batch sizes Nc^2-1 and 2*(Nc^2-1).
+// Falls back to sequential fftnArray for other batch sizes.
+void FFT::fftnArrayMany(
+    complex<double> **data, complex<double> **outdata, const int nn[],
+    const int isign, const int mDim) {
+    // Only use batched FFT for known plan sizes; fall back otherwise
+    if (mDim != matDim_ - 1 && mDim != 2 * (matDim_ - 1)) {
+        fftnArray(data, outdata, nn, isign, mDim);
+        return;
+    }
+
+    // Lazily create array plans and resize buffers on first use
+    initArrayPlans();
+
+    unsigned ntot = nn[0] * nn[1];
+    int pos, newpos;
+
+    // Copy all components into inputMany buffer with quadrant shift
+    for (int k = 0; k < mDim; k++) {
+        int k_offset = k * ntot;
+        for (int i = nn[0] / 2; i < nn[0]; i++) {
+            for (int j = nn[1] / 2; j < nn[1]; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = real(data[pos][k]);
+                inputMany[newpos][1] = imag(data[pos][k]);
+            }
+        }
+        for (int i = 0; i < nn[0] / 2; i++) {
+            for (int j = 0; j < nn[1] / 2; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k_offset;
+                inputMany[newpos][0] = real(data[pos][k]);
+                inputMany[newpos][1] = imag(data[pos][k]);
+            }
+        }
+        for (int i = nn[0] / 2; i < nn[0]; i++) {
+            for (int j = 0; j < nn[1] / 2; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = real(data[pos][k]);
+                inputMany[newpos][1] = imag(data[pos][k]);
+            }
+        }
+        for (int i = 0; i < nn[0] / 2; i++) {
+            for (int j = nn[1] / 2; j < nn[1]; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                inputMany[newpos][0] = real(data[pos][k]);
+                inputMany[newpos][1] = imag(data[pos][k]);
+            }
+        }
+    }
+
+    // Execute appropriate batched plan
+    if (mDim == 2 * (matDim_ - 1)) {
+        fftw_execute(isign == 1 ? pArray2Nc2m1_ : pArray2Nc2m1Back_);
+    } else {
+        fftw_execute(isign == 1 ? pArrayNc2m1_ : pArrayNc2m1Back_);
+    }
+
+    // if this is inverse transform, normalize.
+    if (isign == -1) {
+        const double inv_ntot = 1.0 / static_cast<double>(ntot);
+        for (unsigned i = 0; i < ntot * static_cast<unsigned>(mDim); i++) {
+            outputMany[i][0] *= inv_ntot;
+            outputMany[i][1] *= inv_ntot;
+        }
+    }
+
+    // Copy results back from outputMany with quadrant shift
+    for (int k = 0; k < mDim; k++) {
+        int k_offset = k * ntot;
+        for (int i = nn[0] / 2; i < nn[0]; i++) {
+            for (int j = nn[1] / 2; j < nn[1]; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                outdata[pos][k] =
+                    complex<double>(outputMany[newpos][0], outputMany[newpos][1]);
+            }
+        }
+        for (int i = 0; i < nn[0] / 2; i++) {
+            for (int j = 0; j < nn[1] / 2; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k_offset;
+                outdata[pos][k] =
+                    complex<double>(outputMany[newpos][0], outputMany[newpos][1]);
+            }
+        }
+        for (int i = nn[0] / 2; i < nn[0]; i++) {
+            for (int j = 0; j < nn[1] / 2; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k_offset;
+                outdata[pos][k] =
+                    complex<double>(outputMany[newpos][0], outputMany[newpos][1]);
+            }
+        }
+        for (int i = 0; i < nn[0] / 2; i++) {
+            for (int j = nn[1] / 2; j < nn[1]; j++) {
+                pos = i * nn[1] + j;
+                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k_offset;
+                outdata[pos][k] =
+                    complex<double>(outputMany[newpos][0], outputMany[newpos][1]);
             }
         }
     }
