@@ -1,6 +1,8 @@
 
 #include "Cell.h"
 
+#include <memory>
+
 Cell::Cell(const int Nc, const int mode) {
     mode_ = mode;
     U = new Matrix(Nc, 1.);
@@ -13,10 +15,8 @@ Cell::Cell(const int Nc, const int mode) {
         Ux2 = new Matrix(Nc, 1.);
         Uy2 = new Matrix(Nc, 1.);
 
-        Tmunu.resize(10, 0);
-        umu.resize(4, 0);
-        umu[0] = 1.0;
-        pimunu.resize(10, 0);
+        hydro_ = std::make_unique<HydroData>();
+        hydro_->umu[0] = 1.0;
     }
 }
 

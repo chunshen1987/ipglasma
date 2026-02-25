@@ -16,12 +16,15 @@ Lattice::Lattice(Parameters *param, int Nc, int length) {
               << " with a=" << a << " fm ...";
 
     // initialize the array of cells
+    cells.reserve(size_);
     for (int i = 0; i < size_; i++) {
-        Cell *cell;
-        cell = new Cell(Nc_, mode);
-        cells.push_back(cell);
+        cells.push_back(new Cell(Nc_, mode));
     }
 
+    pospX.reserve(size_);
+    pospY.reserve(size_);
+    posmX.reserve(size_);
+    posmY.reserve(size_);
     for (int i = 0; i < N_; i++) {
         for (int j = 0; j < N_; j++) {
             // pos = i*length+j;
@@ -135,7 +138,7 @@ void Lattice::WriteWilsonLines(
         Outfile1.write((char *)&a, sizeof(double));
         Outfile1.write((char *)&temp, sizeof(double));
 
-        double *val1 = new double[2];
+        double val1[2];
 
         for (int ix = 0; ix < N_; ix++) {
             for (int iy = 0; iy < N_; iy++) {
@@ -163,8 +166,6 @@ void Lattice::WriteWilsonLines(
             exit(1);
         }
 
-        delete[] val1;
-
         Outfile1.close();
         std::cout << "wrote " << strVOne_name.str() << std::endl;
     } else {
@@ -179,10 +180,9 @@ BufferLattice::BufferLattice(int N, int length) {
     Nc_ = N;
     size_ = length * length;
 
+    cells.reserve(size_);
     for (int i = 0; i < size_; i++) {
-        SmallCell *cell;
-        cell = new SmallCell(Nc_);
-        cells.push_back(cell);
+        cells.push_back(new SmallCell(Nc_));
     }
 }
 

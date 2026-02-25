@@ -41,8 +41,8 @@ class Spinor {
     int getNDim() const { return ndim; }
     int getNN() const { return nn; }
 
-    double norm() {
-        nn = (*this).getNN();
+    double norm() const {
+        // nn = (*this).getNN() was a no-op self-assignment that prevented const
         complex<double> mynorm = 0.;
         for (int i = 0; i < nn; i++) mynorm += (conj(e[i]) * e[i]);
 

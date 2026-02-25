@@ -27,8 +27,8 @@ class Matrix {
     Matrix &inv();
     Matrix &logm_pade(const int m);
     Matrix &sqrtm(const int scale = 1);
-    double OneNorm();
-    double FrobeniusNorm();
+    double OneNorm() const;
+    double FrobeniusNorm() const;
 
     Matrix &logm();
 
@@ -60,9 +60,11 @@ class Matrix {
     // Matrix exponential of traceless hermitian
     // matrix using coefficients of t^a as input
     std::vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
+    // In-place overload: writes result into pre-allocated vector (avoids heap alloc)
+    void expmCoeff(std::vector<double> &Q, int n, std::vector<complex<double>> &result);
 
-    complex<double> det();
-    complex<double> trace();
+    complex<double> det() const;
+    complex<double> trace() const;
 
     void reu() {
         if (ndim == 3) {
@@ -148,6 +150,12 @@ class Matrix {
     //+=
     Matrix &operator+=(const Matrix &a) {
         for (int i = 0; i < nn; i++) e[i] += a.e[i];
+        return *this;
+    }
+
+    // compound: *this += c * a  (no intermediate Matrix temporary)
+    Matrix &addScaled(complex<double> c, const Matrix &a) {
+        for (int i = 0; i < nn; i++) e[i] += c * a.e[i];
         return *this;
     }
 

@@ -5,6 +5,7 @@
 
 #include <complex>
 #include <iostream>
+#include <vector>
 
 #include "Matrix.h"
 
@@ -24,24 +25,24 @@ void GaugeFix::FFTChi(
     int Nc = param->getNc();
     int Nc2m1 = Nc * Nc - 1;
 
-    Matrix one(Nc, 1.);
     Matrix g(Nc), gdag(Nc);
     Matrix divA(Nc);
     Matrix UDx(Nc), UDy(Nc), UDxMx(Nc), UDyMy(Nc), Ux(Nc), Uy(Nc), UxMx(Nc),
         UyMy(Nc);
 
     const int max_gfiter = steps;
+    const double invN2 = 1.0 / static_cast<double>(N * N);
+    const double invNc = 1.0 / static_cast<double>(Nc);
 
     Matrix zero(Nc, 0.);
     double gresidual_prev = 10000.;
     double gresidual = 0.;
 
-    Matrix **chi;
-    chi = new Matrix *[N * N];
-
-    for (int i = 0; i < N * N; i++) {
-        chi[i] = new Matrix(Nc, 0.);
-    }
+    // Single contiguous allocation for all N*N chi matrices;
+    // pointer array needed for fft->fftn(Matrix**) interface
+    std::vector<Matrix> chiStorage(N * N, Matrix(Nc, 0.));
+    std::vector<Matrix *> chi(N * N);
+    for (int i = 0; i < N * N; i++) chi[i] = &chiStorage[i];
 
     cout << "gauge fixing" << endl;
 
@@ -85,12 +86,12 @@ void GaugeFix::FFTChi(
                 gdag.conjg();
 
                 gresidual +=
-                    ((gdag * g).trace()).real() / static_cast<double>(Nc);
+                    ((gdag * g).trace()).real() * invNc;
 
             }  // i loop
         }  // j loop
 
-        gresidual /= N * N;
+        gresidual *= invN2;
 
         if (gfiter % 10 == 0) {
             cout << gfiter << " " << gresidual << endl;
@@ -107,7 +108,7 @@ void GaugeFix::FFTChi(
             break;
         }
 
-        fft->fftn(chi, chi, nn, 1);
+        fft->fftn(chi.data(), chi.data(), nn, 1);
 
 #pragma omp parallel for
         for (int i = 0; i < N; i++) {
@@ -125,7 +126,7 @@ void GaugeFix::FFTChi(
             }
         }
 
-        fft->fftn(chi, chi, nn, -1);
+        fft->fftn(chi.data(), chi.data(), nn, -1);
 
 #pragma omp parallel
         {
@@ -143,7 +144,7 @@ void GaugeFix::FFTChi(
                     if (localg(2) != localg(2)) {
                         cout << "problem at " << i << " " << j
                              << " with g=" << localg << endl;
-                        localg = one;
+                        localg = Matrix(Nc, 1.);
                     }
 
                     lat->cells[localpos]->setg(localg);
@@ -157,18 +158,12 @@ void GaugeFix::FFTChi(
             }
         }
     }  // gfiter loop
-
-    for (int i = 0; i < N * N; i++) {
-        delete chi[i];
-    }
-    delete[] chi;
 }
 
 void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
     int N = param->getSize();
     int pos, posmX, posmY;
     int Nc = param->getNc();
-    Matrix g(Nc), gdag(Nc);
 
     pos = i * N + j;
 
@@ -184,7 +179,8 @@ void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
         posmY = i * N + j - 1;
     }
 
-    g = gdag = lat->cells[pos]->getg();
+    Matrix g = lat->cells[pos]->getg();
+    Matrix gdag = g;
     gdag.conjg();
 
     // gauge transform Ux and Uy

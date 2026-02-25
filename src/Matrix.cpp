@@ -425,6 +425,98 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
     return result;
 }
 
+// In-place overload: writes 9 SU(3) exponent coefficients into a pre-allocated
+// vector, avoiding a heap allocation on every call.
+void Matrix::expmCoeff(std::vector<double> &Q, int Nc,
+                       std::vector<complex<double>> &result) {
+    result.resize(9);
+    int Nc2m1 = Nc * Nc - 1;
+    double sqrt3 = sqrt(3.);
+    complex<double> f0, f1, f2, iu, u0, ua[8];
+    double c0 = 0., c0max, u, w, xi0, den, thetaOverThree;
+
+    c0 = sqrt3 * (Q[0] * Q[0] * Q[7] + Q[1] * Q[1] * Q[7] + Q[2] * Q[2] * Q[7]);
+    c0 -= Q[7] * Q[7] * Q[7] / sqrt3;
+    c0 -= (sqrt3 / 2.)
+          * (Q[3] * Q[3] * Q[7] + Q[4] * Q[4] * Q[7] + Q[5] * Q[5] * Q[7]
+             + Q[6] * Q[6] * Q[7]);
+    c0 += 3.
+          * (Q[0] * Q[3] * Q[5] + Q[0] * Q[4] * Q[6] + Q[1] * Q[4] * Q[5]
+             - Q[1] * Q[3] * Q[6]);
+    c0 += 1.5
+          * (Q[2] * Q[3] * Q[3] + Q[2] * Q[4] * Q[4] - Q[2] * Q[5] * Q[5]
+             - Q[2] * Q[6] * Q[6]);
+    c0 /= 12.;
+
+    double c1 = 0.;
+    for (int a = 0; a < Nc2m1; a++) {
+        c1 += Q[a] * Q[a];
+    }
+    c1 *= 0.25;
+
+    c0max = std::max(1e-15, 2. * pow(c1 / 3., 1.5));
+    thetaOverThree = acos(c0 / c0max) / 3.;
+    u = sqrt(c1 / 3.) * cos(thetaOverThree);
+    w = sqrt(c1) * sin(thetaOverThree);
+    xi0 = sin(w) / w;
+    den = 9. * u * u - w * w;
+    iu = complex<double>(0, 1) * u;
+
+    double cosw = cos(w);
+    complex<double> exp2iu = exp(2. * iu);
+    complex<double> expmiu = exp(-iu);
+
+    f0 = (u * u - w * w) * exp2iu
+         + expmiu * (8. * u * u * cosw + 2. * iu * xi0 * (3. * u * u + w * w));
+    f0 /= den;
+
+    f1 = 2. * u * exp2iu
+         - expmiu
+               * (2. * u * cosw
+                  - complex<double>(0., 1.) * (3. * u * u - w * w) * xi0);
+    f1 /= den;
+
+    f2 = exp2iu - expmiu * (cosw + 3. * iu * xi0);
+    f2 /= den;
+
+    u0 = f0 + 2. / 3. * c1 * f2;
+
+    f1 /= (0.5 * f2);  // will multiply everything by 0.5 f2 again later
+
+    for (int i = 0; i < 8; i++) {
+        ua[i] = f1 * Q[i];
+    }
+
+    ua[0] += (Q[3] * Q[5] + Q[4] * Q[6] + 2. / sqrt3 * Q[0] * Q[7]);
+    ua[1] += (2. * Q[1] * Q[7] / sqrt3 - Q[3] * Q[6] + Q[4] * Q[5]);
+    ua[2] +=
+        (2. * Q[2] * Q[7] / sqrt3 + 0.5 * Q[3] * Q[3] + 0.5 * Q[4] * Q[4]
+         - 0.5 * Q[5] * Q[5] - 0.5 * Q[6] * Q[6]);
+    ua[3] +=
+        (-1. / sqrt3 * Q[3] * Q[7] + Q[0] * Q[5] - Q[1] * Q[6] + Q[2] * Q[3]);
+    ua[4] +=
+        (-1. / sqrt3 * Q[4] * Q[7] + Q[0] * Q[6] + Q[1] * Q[5] + Q[2] * Q[4]);
+    ua[5] +=
+        (-1. / sqrt3 * Q[5] * Q[7] + Q[0] * Q[3] + Q[1] * Q[4] - Q[2] * Q[5]);
+    ua[6] +=
+        (-1. / sqrt3 * Q[6] * Q[7] + Q[0] * Q[4] - Q[1] * Q[3] - Q[2] * Q[6]);
+    ua[7] += (Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2] - Q[7] * Q[7]
+              - 0.5 * Q[3] * Q[3] - 0.5 * Q[4] * Q[4] - 0.5 * Q[5] * Q[5]
+              - 0.5 * Q[6] * Q[6])
+             / sqrt3;
+
+    result[0] = u0;
+    for (int i = 0; i < 8; i++) {
+        result[i + 1] = ua[i] * 0.5 * f2;
+    }
+
+    for (int i = 0; i < 9; i++) {
+        if (std::isnan(result[i].real()) or std::isnan(result[i].imag())) {
+            result[i] = 0;
+        }
+    }
+}
+
 // matrix exponential using Pade approximant
 // t is a scalar that multiplies the matrix (default: t=1) and p is the order in
 // the Pade approximant (default: p=6)
@@ -559,36 +651,19 @@ Matrix &Matrix::expm(double t, const int p) {
     return *this;
 }
 
-complex<double> Matrix::det() {
-    int n = this->getNDim();
-    Matrix Q(n);
-    Q = *this;
-    complex<double> det;
-
-    if (n == 2) {
-        det = Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0);
-    } else if (n == 3) {
-        det = Q(0, 0) * Q(1, 1) * Q(2, 2) + Q(0, 1) * Q(1, 2) * Q(2, 0)
-              + Q(0, 2) * Q(1, 0) * Q(2, 1) - Q(0, 2) * Q(1, 1) * Q(2, 0)
-              - Q(0, 1) * Q(1, 0) * Q(2, 2) - Q(1, 2) * Q(2, 1) * Q(0, 0);
+complex<double> Matrix::det() const {
+    if (ndim == 2) {
+        return e[0] * e[3] - e[1] * e[2];
+    } else {  // ndim == 3
+        return e[0] * e[4] * e[8] + e[1] * e[5] * e[6]
+               + e[2] * e[3] * e[7] - e[2] * e[4] * e[6]
+               - e[1] * e[3] * e[8] - e[5] * e[7] * e[0];
     }
-
-    return det;
 }
 
-complex<double> Matrix::trace() {
-    int n = this->getNDim();
-    Matrix Q(n);
-    Q = *this;
-    complex<double> trace;
-
-    if (n == 2) {
-        trace = Q(0, 0) + Q(1, 1);
-    } else if (n == 3) {
-        trace = Q(0, 0) + Q(1, 1) + Q(2, 2);
-    }
-
-    return trace;
+complex<double> Matrix::trace() const {
+    if (ndim == 2) return e[0] + e[3];
+    else return e[0] + e[4] + e[8];  // ndim == 3
 }
 
 complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
@@ -626,71 +701,54 @@ std::string Matrix::MatrixToString() {
     return output.str();
 }
 
-double Matrix::FrobeniusNorm() {
-    int n = this->getNDim();
-    Matrix Q(n);
-    Q = *this;
+double Matrix::FrobeniusNorm() const {
+    // Bug fix: was using = instead of +=, returning only |last element|
     double norm = 0.;
-
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            norm = abs(Q(i, j)) * abs(Q(i, j));
-        }
+    for (int i = 0; i < nn; i++) {
+        norm += e[i].real() * e[i].real() + e[i].imag() * e[i].imag();
     }
-
-    norm = sqrt(norm);
-
-    return norm;
+    return sqrt(norm);
 }
 
-double Matrix::OneNorm() {
-    int n = this->getNDim();
-    Matrix Q(n);
-    Q = *this;
-    double norm[3];
-    double onenorm;
-
-    for (int j = 0; j < n; j++) {
-        for (int i = 0; i < n; i++) {
-            norm[j] = abs(Q(i, j));
+double Matrix::OneNorm() const {
+    // Bug fix: was overwriting norm[j] per row instead of accumulating column sums
+    // One-norm = max absolute column sum
+    double onenorm = 0.;
+    for (int j = 0; j < ndim; j++) {
+        double colsum = 0.;
+        for (int i = 0; i < ndim; i++) {
+            colsum += std::abs(e[i * ndim + j]);
         }
+        onenorm = std::max(onenorm, colsum);
     }
-
-    onenorm = std::max(norm[0], norm[1]);
-    onenorm = std::max(onenorm, norm[2]);
-
     return onenorm;
 }
 
 Matrix &Matrix::inv() {
-    int n = this->getNDim();
+    const int n = ndim;
     Matrix H2(n);
-    Matrix Q(n);
-    Q = *this;
-
+    // Work directly from e[] to avoid copying *this into a temporary
     if (n == 2) {
-        H2.set(0, 0, Q(1, 1));
-        H2.set(0, 1, -Q(0, 1));
-        H2.set(1, 0, -Q(1, 0));
-        H2.set(1, 1, Q(0, 0));
-        H2 *= 1. / (Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0));  // divide by det(H)
+        H2.set(0, 0,  e[3]);
+        H2.set(0, 1, -e[1]);
+        H2.set(1, 0, -e[2]);
+        H2.set(1, 1,  e[0]);
+        H2 *= 1. / (e[0] * e[3] - e[1] * e[2]);
     } else if (n == 3) {
-        H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
-        H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
-        H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
-        H2.set(1, 0, (Q(1, 2) * Q(2, 0) - Q(1, 0) * Q(2, 2)));
-        H2.set(1, 1, (Q(0, 0) * Q(2, 2) - Q(0, 2) * Q(2, 0)));
-        H2.set(1, 2, (Q(0, 2) * Q(1, 0) - Q(0, 0) * Q(1, 2)));
-        H2.set(2, 0, (Q(1, 0) * Q(2, 1) - Q(1, 1) * Q(2, 0)));
-        H2.set(2, 1, (Q(0, 1) * Q(2, 0) - Q(0, 0) * Q(2, 1)));
-        H2.set(2, 2, (Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0)));
+        H2.set(0, 0, (e[4] * e[8] - e[5] * e[7]));
+        H2.set(0, 1, (e[2] * e[7] - e[1] * e[8]));
+        H2.set(0, 2, (e[1] * e[5] - e[2] * e[4]));
+        H2.set(1, 0, (e[5] * e[6] - e[3] * e[8]));
+        H2.set(1, 1, (e[0] * e[8] - e[2] * e[6]));
+        H2.set(1, 2, (e[2] * e[3] - e[0] * e[5]));
+        H2.set(2, 0, (e[3] * e[7] - e[4] * e[6]));
+        H2.set(2, 1, (e[1] * e[6] - e[0] * e[7]));
+        H2.set(2, 2, (e[0] * e[4] - e[1] * e[3]));
         H2 *= 1.
-              / (Q(0, 0) * Q(1, 1) * Q(2, 2) + Q(0, 1) * Q(1, 2) * Q(2, 0)
-                 + Q(0, 2) * Q(1, 0) * Q(2, 1) - Q(0, 2) * Q(1, 1) * Q(2, 0)
-                 - Q(0, 1) * Q(1, 0) * Q(2, 2)
-                 - Q(1, 2) * Q(2, 1) * Q(0, 0));  // divide by det(H)
+              / (e[0] * e[4] * e[8] + e[1] * e[5] * e[6]
+                 + e[2] * e[3] * e[7] - e[2] * e[4] * e[6]
+                 - e[1] * e[3] * e[8] - e[5] * e[7] * e[0]);
     }
-
     *this = H2;
     return *this;
 }

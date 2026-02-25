@@ -72,15 +72,15 @@ class FFT {
         int maxBatch = std::max(matDim_, 2 * Nc2m1);
         int ntot = nn_stored_[0] * nn_stored_[1];
 
-        // Reallocate many-buffers to fit the largest batch size
+        // Expand buffers from matDim_ to maxBatch to fit the array plans.
+        // Rebuild pmany/pmanyback since their buffer pointer becomes invalid.
         fftw_free(inputMany);
         fftw_free(outputMany);
-        inputMany = (fftw_complex *)fftw_malloc(
-            sizeof(fftw_complex) * ntot * maxBatch);
-        outputMany = (fftw_complex *)fftw_malloc(
-            sizeof(fftw_complex) * ntot * maxBatch);
+        inputMany  = 
+            (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ntot * maxBatch);
+        outputMany = 
+            (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ntot * maxBatch);
 
-        // Recreate matrix many plans with new buffers
         fftw_destroy_plan(pmany);
         fftw_destroy_plan(pmanyback);
         pmany = fftw_plan_many_dft(
@@ -131,7 +131,8 @@ class FFT {
         pback = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_BACKWARD, FFTW_MEASURE);
 
-        // Allocate many-buffers for matrix FFTs only (matDim_ = Nc*Nc; 9 for SU(3))
+        // Allocate many-buffers for matrix FFTs (matDim_ = Nc*Nc = 9 for SU(3)).
+        // initArrayPlans() will reallocate to maxBatch when first needed by JIMWLK.
         inputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * matDim_);
         outputMany = (fftw_complex *)fftw_malloc(

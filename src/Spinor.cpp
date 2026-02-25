@@ -9,9 +9,7 @@ using std::endl;
 Spinor::Spinor(int n) {
     ndim = n;
     nn = ndim;
-    // e = new complex<double> [nn];
-    e.resize(nn);
-    for (int i = 0; i < nn; i++) e[i] = complex<double>(0.0, 0.0);
+    e.resize(nn);  // value-initializes to zero
 }
 
 Spinor::Spinor(int n, complex<double> a, complex<double> b, complex<double> c) {
@@ -26,8 +24,7 @@ Spinor::Spinor(int n, complex<double> a, complex<double> b, complex<double> c) {
     }
     ndim = n;
     nn = ndim;
-    // e = new complex<double> [nn];
-    e.resize(nn);
+    e.resize(nn);  // value-initializes to zero
     e[0] = a;
     e[1] = b;
     e[2] = c;
@@ -43,8 +40,7 @@ Spinor::Spinor(int n, complex<double> a, complex<double> b) {
     }
     ndim = n;
     nn = ndim;
-    // e = new complex<double> [nn];
-    e.resize(nn);
+    e.resize(nn);  // value-initializes to zero
     e[0] = a;
     e[1] = b;
 }
@@ -52,10 +48,9 @@ Spinor::Spinor(int n, complex<double> a, complex<double> b) {
 Spinor Spinor::normalize() { return (*this) / (*this).norm(); }
 
 Spinor Spinor::GramSchmidt(const Spinor &a) {
-    Spinor a1(ndim), c(ndim);
-    a1 = a;
+    Spinor a1 = a;  // copy directly, avoids zero-init+assign
     a1 = a1.normalize();
-    c = (*this) - (a1 * (*this)) * a1;
+    Spinor c = (*this) - (a1 * (*this)) * a1;
     return c.normalize();
 }
 

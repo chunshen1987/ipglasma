@@ -3,6 +3,7 @@
 
 #include "Init.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -665,18 +666,21 @@ void Init::samplePartonPositions(
     const double dq_min = param->getDqmin();  // fm
     const double dq_min_sq = dq_min * dq_min;
     const double omega = param->getOmega();
+    const bool isOmegaOne = (std::abs(omega - 1) < 1e-8);
 
     vector<double> r_array(Nq, 0.);
-    BGq_array.resize(Nq, BGq);
-    for (int iq = 0; iq < Nq; iq++) {
-        if (std::abs(omega - 1) < 1e-8) {
+    BGq_array.assign(Nq, BGq);  // assign (not resize) to overwrite previous values
+    if (isOmegaOne) {
+        for (int iq = 0; iq < Nq; iq++) {
             double xq = sqrtBG * random->Gauss();
             double yq = sqrtBG * random->Gauss();
             double zq = sqrtBG * random->Gauss();
             r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
-        } else {
+        }
+    } else {
+        for (int iq = 0; iq < Nq; iq++) {
             double bperp = sqrtBG * sqrt(omega * random->sampleGammaInc());
-            r_array[iq] = bperp;  // bperp in 2D (asuume z = 0)
+            r_array[iq] = bperp;  // bperp in 2D (assume z = 0)
         }
     }
     std::sort(r_array.begin(), r_array.end());
@@ -693,10 +697,11 @@ void Init::samplePartonPositions(
             iter++;
             reject_flag = 0;
             double phi = 2. * M_PI * random->genrand64_real2();
-            double theta = acos(1. - 2. * random->genrand64_real2());
-            if (std::abs(omega - 1) < 1e-8) {
-                x_i = r_i * sin(theta) * cos(phi);
-                y_i = r_i * sin(theta) * sin(phi);
+            if (isOmegaOne) {
+                double theta = acos(1. - 2. * random->genrand64_real2());
+                double sinTheta = sin(theta);
+                x_i = r_i * sinTheta * cos(phi);
+                y_i = r_i * sinTheta * sin(phi);
                 z_i = r_i * cos(theta);
             } else {
                 x_i = r_i * cos(phi);
@@ -742,10 +747,7 @@ void Init::samplePartonPositions(
 // Q_s as a function of \sum T_p and y (new in this version of the code -
 // v1.2 and up)
 double Init::getNuclearQs2(double T, double y) {
-    double value, fracy, fracT, QsYdown, QsYup;
-    int posy, check = 0;
-    fracy = 0.;
-    posy = static_cast<int>(floor(y / deltaYNuc + 0.0000001));
+    const int posy = static_cast<int>(floor(y / deltaYNuc + 0.0000001));
 
     if (y > iymaxNuc * deltaYNuc) {
         cout << " [Init:getNuclearQs2]:ERROR: y out of range. Maximum y "
@@ -756,7 +758,6 @@ double Init::getNuclearQs2(double T, double y) {
         exit(1);
     }
 
-    //  if ( T > Qs2Nuclear[iTpmax-1][iymaxNuc-1] )
     if (T > Tlist[iTpmax - 1]) {
         cerr << "T=" << T << ", maximal T in table=" << Tlist[iTpmax - 1]
              << endl;
@@ -765,47 +766,30 @@ double Init::getNuclearQs2(double T, double y) {
                 "in "
                 "table."
              << endl;
-        check = 1;
-        fracy = (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
-        QsYdown = (Qs2Nuclear[iTpmax - 1][posy]);
-        QsYup = (Qs2Nuclear[iTpmax - 1][posy + 1]);
-        value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
-        return value;
+        const double fracy =
+            (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
+        return fracy * Qs2Nuclear[iTpmax - 1][posy + 1]
+               + (1. - fracy) * Qs2Nuclear[iTpmax - 1][posy];
     }
 
     if (T < Tlist[0]) {
-        check = 1;
         return 0.;
     }
 
-    for (int iT = 0; iT < iTpmax; iT++) {
-        if (T >= Tlist[iT] && T < Tlist[iT + 1]) {
-            fracT = (T - Tlist[iT]) / (Tlist[iT + 1] - Tlist[iT]);
-            fracy = (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
+    // Binary search: O(log2(200)) ~ 8 comparisons instead of O(200) linear scan
+    // std::upper_bound returns iterator to first element > T
+    const double *upper = std::upper_bound(Tlist, Tlist + iTpmax, T);
+    const int iT = std::min(static_cast<int>(upper - Tlist) - 1, iTpmax - 2);
 
-            QsYdown = (fracT) * (Qs2Nuclear[iT + 1][posy])
-                      + (1. - fracT) * (Qs2Nuclear[iT][posy]);
-            QsYup = (fracT) * (Qs2Nuclear[iT + 1][posy + 1])
-                    + (1. - fracT) * (Qs2Nuclear[iT][posy + 1]);
-            value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
+    const double fracT = (T - Tlist[iT]) / (Tlist[iT + 1] - Tlist[iT]);
+    const double fracy =
+        (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
 
-            check++;
-            continue;
-        }
-    }
-
-    if (check != 1) {
-        cout << check << ": T=" << T << endl;
-        cerr << " [Init:getNuclearQs2]:ERROR: something went wrong in "
-                "determining "
-                "the value of Qs^2. Using maximal T_p"
-             << endl;
-        value =
-            (fracy * Qs2Nuclear[iTpmax - 1][posy + 1]
-             + (1. - fracy) * Qs2Nuclear[iTpmax - 1][posy]);
-    }
-
-    return value;
+    const double QsYdown = fracT * Qs2Nuclear[iT + 1][posy]
+                           + (1. - fracT) * Qs2Nuclear[iT][posy];
+    const double QsYup = fracT * Qs2Nuclear[iT + 1][posy + 1]
+                         + (1. - fracT) * Qs2Nuclear[iT][posy + 1];
+    return fracy * QsYup + (1. - fracy) * QsYdown;
 }
 
 // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
@@ -929,6 +913,11 @@ void Init::setColorChargeDensity(
     }
 
     const int NqFlag = param->getUseConstituentQuarkProton();
+    const double BG = param->getBG();
+    const double sqrt1pxi = std::sqrt(1.0 + xi);
+    const double inv_hbarc2 = 1.0 / (hbarc * hbarc);
+    const double twoPiBG = 2.0 * M_PI * BG;
+    const double invNucleiInAverage = 1.0 / nucleiInAverage;
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
     xq1.clear();
     xq2.clear();
@@ -968,6 +957,17 @@ void Init::setColorChargeDensity(
         }
         sampleQsNormalization(random, param, Npartons, gauss_array);
         gauss2.push_back(gauss_array);
+    }
+
+    // Precompute cos/sin of nucleon orientations for anisotropy
+    std::vector<double> cosPhiA(A1), sinPhiA(A1), cosPhiB(A2), sinPhiB(A2);
+    for (int i = 0; i < A1; i++) {
+        cosPhiA[i] = cos(nucleusA_[i].phi);
+        sinPhiA[i] = sin(nucleusA_[i].phi);
+    }
+    for (int i = 0; i < A2; i++) {
+        cosPhiB[i] = cos(nucleusB_[i].phi);
+        sinPhiB[i] = sin(nucleusB_[i].phi);
     }
 
     // test what a smooth Woods-Saxon would give
@@ -1052,151 +1052,131 @@ void Init::setColorChargeDensity(
             // nucleus A
             lat->cells[ipos]->setTpA(0.);
             for (int i = 0; i < A1; i++) {
-                double xm = nucleusA_.at(i).x;
-                double ym = nucleusA_.at(i).y;
+                const double xm = nucleusA_[i].x;
+                const double ym = nucleusA_[i].y;
 
                 double T = 0.;
                 double bp2 = 0.;
-                if (param->getUseConstituentQuarkProton() > 0) {
+                if (NqFlag > 0) {
+                    const double invNq = 1.0 / static_cast<double>(xq1[i].size());
                     for (unsigned int iq = 0; iq < xq1[i].size(); iq++) {
-                        bp2 = (xm + xq1[i][iq] - x) * (xm + xq1[i][iq] - x)
-                              + (ym + yq1[i][iq] - y) * (ym + yq1[i][iq] - y);
-                        bp2 /= hbarc * hbarc;
+                        const double dxq = xm + xq1[i][iq] - x;
+                        const double dyq = ym + yq1[i][iq] - y;
+                        bp2 = (dxq * dxq + dyq * dyq) * inv_hbarc2;
 
                         T += exp(-bp2 / (2. * BGq1[i][iq]))
                              / (2. * M_PI * BGq1[i][iq])
-                             / (static_cast<double>(xq1[i].size()))
-                             * gauss1[i][iq];  // I removed the 2/3 here
-                                               // to make it a bit bigger
+                             * invNq * gauss1[i][iq]; // I removed the 2/3 here
+                                                      // to make it a bit bigger
                     }
                 } else {
-                    const double BG = param->getBG();
-                    double phi = nucleusA_.at(i).phi;
-
-                    bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                          + xi
-                                * pow(
-                                    (xm - x) * cos(phi) + (ym - y) * sin(phi),
-                                    2.);
-                    bp2 /= hbarc * hbarc;
-                    T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss1[i][0];  // T_p in this cell for the
-                                         // current nucleon
+                    const double dx = xm - x;
+                    const double dy = ym - y;
+                    const double proj = dx * cosPhiA[i] + dy * sinPhiA[i];
+                    bp2 = (dx * dx + dy * dy + xi * proj * proj) * inv_hbarc2;
+                    T = sqrt1pxi * exp(-bp2 / (2. * BG)) / twoPiBG
+                        * gauss1[i][0]; // T_p in this cell for the
+                                        // contribution of this nucleon
                 }
                 lat->cells[ipos]->setTpA(
                     lat->cells[ipos]->getTpA()
-                    + T / nucleiInAverage);  // add up all T_p
+                    + T * invNucleiInAverage);  // add up all T_p
             }
 
             // nucleus B
             lat->cells[ipos]->setTpB(0.);
             for (int i = 0; i < A2; i++) {
-                double xm = nucleusB_.at(i).x;
-                double ym = nucleusB_.at(i).y;
+                const double xm = nucleusB_[i].x;
+                const double ym = nucleusB_[i].y;
 
                 double T = 0.;
                 double bp2 = 0.;
-                if (param->getUseConstituentQuarkProton() > 0) {
-                    T = 0.;
+                if (NqFlag > 0) {
+                    const double invNq = 1.0 / static_cast<double>(xq2[i].size());
                     for (unsigned int iq = 0; iq < xq2[i].size(); iq++) {
-                        bp2 = (xm + xq2[i][iq] - x) * (xm + xq2[i][iq] - x)
-                              + (ym + yq2[i][iq] - y) * (ym + yq2[i][iq] - y);
-                        bp2 /= hbarc * hbarc;
+                        const double dxq = xm + xq2[i][iq] - x;
+                        const double dyq = ym + yq2[i][iq] - y;
+                        bp2 = (dxq * dxq + dyq * dyq) * inv_hbarc2;
 
                         T += exp(-bp2 / (2. * BGq2[i][iq]))
                              / (2. * M_PI * BGq2[i][iq])
-                             / (static_cast<double>(xq2[i].size()))
-                             * gauss2[i][iq];
+                             * invNq * gauss2[i][iq];
                     }
                 } else {
-                    const double BG = param->getBG();
-                    double phi = nucleusB_.at(i).phi;
-
-                    bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                          + xi
-                                * pow(
-                                    (xm - x) * cos(phi) + (ym - y) * sin(phi),
-                                    2.);
-                    bp2 /= hbarc * hbarc;
-
-                    T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss2[i][0];  // T_p in this cell for the
-                                         // current nucleon
+                    const double dx = xm - x;
+                    const double dy = ym - y;
+                    const double proj = dx * cosPhiB[i] + dy * sinPhiB[i];
+                    bp2 = (dx * dx + dy * dy + xi * proj * proj) * inv_hbarc2;
+                    T = sqrt1pxi * exp(-bp2 / (2. * BG)) / twoPiBG
+                        * gauss2[i][0];
                 }
 
                 lat->cells[ipos]->setTpB(
                     lat->cells[ipos]->getTpB()
-                    + T / nucleiInAverage);  // add up all T_p
+                    + T * invNucleiInAverage);  // add up all T_p
             }
         }
     }
+
+    const double QsmuRatioA = param->getQsmuRatio();
+    const double QsmuRatioB = param->getQsmuRatioB();
+    const double xFactor = param->getxFromThisFactorTimesQs();
+    const double roots = param->getRoots();
+    const double g = param->getg();
+    const int useSmoothNucleus = param->getUseSmoothNucleus();
+    const int useJIMWLK = param->getUseJIMWLK();
+    const int useFluctuatingx = param->getUseFluctuatingx();
+    const double Rmax = param->getRmax();
+    const double g2mu2_factorA = a * a * inv_hbarc2 / (g * g * QsmuRatioA * QsmuRatioA);
+    const double g2mu2_factorB = a * a * inv_hbarc2 / (g * g * QsmuRatioB * QsmuRatioB);
 
 // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
-        int ix = ipos / N;
-        int iy = ipos % N;
-
         double QsA = 1;
         double QsB = 1;
         int check = 0;
-        double distanceA = 0;
-        double distanceB = 0;
 
-        if (param->getUseSmoothNucleus() == 1) {
+        if (useJIMWLK == 1) {
+            // always assign color charge density for whole lattice
+            check = 2;
+        } else if (useSmoothNucleus == 1) {
             check = 2;
         } else {
-            const double BG = param->getBG();
-
             // cut proton at a radius of rmax [fm] (about twice the
             // gluonic radius to be generous)
-
-            if (log(2 * M_PI * BG * lat->cells[ipos]->getTpA()) < 0.) {
-                if (isinf(log(2 * M_PI * BG * lat->cells[ipos]->getTpA())) == 1)
-                    distanceA = param->getRmax() + 1.;
+            double distanceA = 0.;
+            const double logValA = log(twoPiBG * lat->cells[ipos]->getTpA());
+            if (logValA < 0.) {
+                if (std::isinf(logValA))
+                    distanceA = Rmax + 1.;
                 else
-                    distanceA =
-                        sqrt(
-                            -2. * BG
-                            * log(2 * M_PI * BG * lat->cells[ipos]->getTpA()))
-                        * hbarc;
-                // cout << log(2 * M_PI * BG *
-                // lat->cells[ipos]->getTpA()) << endl;
-            } else {
-                distanceA = 0.;
+                    distanceA = sqrt(-2. * BG * logValA) * hbarc;
             }
 
-            if (log(2 * M_PI * BG * lat->cells[ipos]->getTpB()) < 0.) {
-                if (isinf(log(2 * M_PI * BG * lat->cells[ipos]->getTpB())) == 1)
-                    distanceB = param->getRmax() + 1.;
+            double distanceB = 0.;
+            const double logValB = log(twoPiBG * lat->cells[ipos]->getTpB());
+            if (logValB < 0.) {
+                if (std::isinf(logValB))
+                    distanceB = Rmax + 1.;
                 else
-                    distanceB =
-                        sqrt(
-                            -2. * BG
-                            * log(2 * M_PI * BG * lat->cells[ipos]->getTpB()))
-                        * hbarc;
-            } else
-                distanceB = 0.;
+                    distanceB = sqrt(-2. * BG * logValB) * hbarc;
+            }
 
-            if (distanceA < param->getRmax()) {
+            if (distanceA < Rmax) {
                 check = 1;
             }
 
-            if (distanceB < param->getRmax() && check == 1) {
+            if (distanceB < Rmax && check == 1) {
                 check = 2;
             }
         }
 
-        if (param->getUseJIMWLK() == 1) {
-            // always assgin color charge density for whole lattice
-            check = 2;
-        }
-
-        double exponent = 5.6;  // see 1212.2974 Eq. (17)
+        constexpr double exponent = 5.6;  // see 1212.2974 Eq. (17)
         double xVal = 0.;
         if (check == 2) {
-            if (param->getUseFluctuatingx() == 1) {
+            if (useFluctuatingx == 1) {
                 double localrapidity = rapidityA;
                 double yIn = rapidityA;
                 double Ydeviation = 10000;
@@ -1204,10 +1184,10 @@ void Init::setColorChargeDensity(
                 while (abs(Ydeviation) > 0.001) {
                     if (localrapidity >= 0) {
                         QsA = sqrt(getNuclearQs2(
-                            lat->cells[ipos]->getTpA(), abs(localrapidity)));
+                            lat->cells[ipos]->getTpA(),
+                            abs(localrapidity)));
                     } else {
-                        xVal = QsA * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(yIn);
+                        xVal = QsA * xFactor / roots * exp(yIn);
                         if (xVal == 0)
                             QsA = 0.;
                         else
@@ -1223,21 +1203,12 @@ void Init::setColorChargeDensity(
                     } else {
                         // nucleus A
                         lat->cells[ipos]->setg2mu2A(
-                            QsA * QsA / param->getQsmuRatio()
-                            / param->getQsmuRatio() * a * a / hbarc / hbarc
-                            / param->getg()
-                            / param->getg());  // lattice units? check
+                            QsA * QsA * g2mu2_factorA);
 
-                        Ydeviation =
-                            localrapidity
-                            - log(
-                                0.01
-                                / (QsA * param->getxFromThisFactorTimesQs()
-                                   / param->getRoots() * exp(yIn)));
-                        localrapidity =
-                            log(0.01
-                                / (QsA * param->getxFromThisFactorTimesQs()
-                                   / param->getRoots() * exp(yIn)));
+                        const double logYA =
+                            log(0.01 * roots / (QsA * xFactor * exp(yIn)));
+                        Ydeviation = localrapidity - logYA;
+                        localrapidity = logYA;
                     }
                 }
                 if (lat->cells[ipos]->getg2mu2A()
@@ -1249,12 +1220,12 @@ void Init::setColorChargeDensity(
                 yIn = rapidityB;
                 Ydeviation = 10000;
                 while (abs(Ydeviation) > 0.001) {
-                    if (localrapidity >= 0)
+                    if (localrapidity >= 0) {
                         QsB = sqrt(getNuclearQs2(
-                            lat->cells[ipos]->getTpB(), abs(localrapidity)));
-                    else {
-                        xVal = QsB * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(-yIn);
+                            lat->cells[ipos]->getTpB(),
+                            abs(localrapidity)));
+                    } else {
+                        xVal = QsB * xFactor / roots * exp(-yIn);
                         if (xVal == 0)
                             QsB = 0.;
                         else
@@ -1270,19 +1241,12 @@ void Init::setColorChargeDensity(
                     } else {
                         // nucleus B
                         lat->cells[ipos]->setg2mu2B(
-                            QsB * QsB / param->getQsmuRatioB()
-                            / param->getQsmuRatioB() * a * a / hbarc / hbarc
-                            / param->getg() / param->getg());
-                        Ydeviation =
-                            localrapidity
-                            - log(
-                                0.01
-                                / (QsB * param->getxFromThisFactorTimesQs()
-                                   / param->getRoots() * exp(-yIn)));
-                        localrapidity =
-                            log(0.01
-                                / (QsB * param->getxFromThisFactorTimesQs()
-                                   / param->getRoots() * exp(-yIn)));
+                            QsB * QsB * g2mu2_factorB);
+
+                        const double logYB =
+                            log(0.01 * roots / (QsB * xFactor * exp(-yIn)));
+                        Ydeviation = localrapidity - logYB;
+                        localrapidity = logYB;
                     }
                 }
                 if (lat->cells[ipos]->getg2mu2B()
@@ -1291,17 +1255,14 @@ void Init::setColorChargeDensity(
                 }
             } else {
                 // nucleus A
+                const double TpA = lat->cells[ipos]->getTpA();
                 lat->cells[ipos]->setg2mu2A(
-                    getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
-                    / param->getQsmuRatio() / param->getQsmuRatio() * a * a
-                    / hbarc / hbarc / param->getg()
-                    / param->getg());  // lattice units? check
+                    getNuclearQs2(TpA, rapidityA) * g2mu2_factorA);
 
                 // nucleus B
+                const double TpB = lat->cells[ipos]->getTpB();
                 lat->cells[ipos]->setg2mu2B(
-                    getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
-                    / param->getQsmuRatioB() / param->getQsmuRatioB() * a * a
-                    / hbarc / hbarc / param->getg() / param->getg());
+                    getNuclearQs2(TpB, rapidityB) * g2mu2_factorB);
             }
         }
     }
@@ -1732,6 +1693,8 @@ void Init::setV(Lattice *lat, Parameters *param) {
     double UVdamp = param->getUVdamp();  // GeV^-1
     UVdamp = UVdamp / a * hbarc;
     complex<double> **rhoACoeff;
+    // Color-major [Nc2m1_][N*N]: each rhoACoeff[n] is a contiguous N*N array,
+    // required for direct fftnComplex calls without gather/scatter overhead.
     rhoACoeff = new complex<double> *[Nc2m1_];
     for (int i = 0; i < Nc2m1_; i++) {
         rhoACoeff[i] = new complex<double>[N * N];
@@ -1739,13 +1702,13 @@ void Init::setV(Lattice *lat, Parameters *param) {
 
     // loop over longitudinal direction
     for (int k = 0; k < Ny; k++) {
-        double g2muA;
         for (int pos = 0; pos < N * N; pos++) {
+            const double g2muA =
+                param->getg()
+                * sqrt(
+                    lat->cells[pos]->getg2mu2A()
+                    / static_cast<double>(Ny));
             for (int n = 0; n < Nc2m1_; n++) {
-                g2muA =
-                    param->getg()
-                    * sqrt(
-                        lat->cells[pos]->getg2mu2A() / static_cast<double>(Ny));
                 rhoACoeff[n][pos] = g2muA * random_ptr_->Gauss();
             }
         }
@@ -1764,8 +1727,10 @@ void Init::setV(Lattice *lat, Parameters *param) {
                  * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
             ky = 2. * M_PI
                  * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            //kt2 = 4.
+            //      * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            // Use numerically cheaper equivalent
+            kt2 = 4. - 2. * (cos(kx) + cos(ky));
             if (m == 0) {
                 if (kt2 != 0) {
                     for (int n = 0; n < Nc2m1_; n++) {
@@ -1797,6 +1762,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
             std::vector<double> in(Nc2m1_, 0.);
             Matrix temp(Nc_, 1.);
             Matrix tempNew(Nc_, 0.);
+            std::vector<complex<double>> scratchU(9);
 
 #pragma omp for
             for (int pos = 0; pos < N * N; pos++) {
@@ -1805,7 +1771,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
                     // so just multiply by -1 (not -i)
                     in[aa] = -(rhoACoeff[aa][pos]).real();
                 }
-                tempNew = getUfromExponent(in);
+                getUfromExponent(in, tempNew, scratchU);
                 temp = tempNew * lat->cells[pos]->getU();
                 // set U
                 lat->cells[pos]->setU(temp);
@@ -1816,13 +1782,13 @@ void Init::setV(Lattice *lat, Parameters *param) {
 
     // loop over longitudinal direction
     for (int k = 0; k < Ny; k++) {
-        double g2muB;
         for (int pos = 0; pos < N * N; pos++) {
+            const double g2muB =
+                param->getg()
+                * sqrt(
+                    lat->cells[pos]->getg2mu2B()
+                    / static_cast<double>(Ny));
             for (int n = 0; n < Nc2m1_; n++) {
-                g2muB =
-                    param->getg()
-                    * sqrt(
-                        lat->cells[pos]->getg2mu2B() / static_cast<double>(Ny));
                 rhoACoeff[n][pos] = g2muB * random_ptr_->Gauss();
             }
         }
@@ -1841,8 +1807,10 @@ void Init::setV(Lattice *lat, Parameters *param) {
                  * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
             ky = 2. * M_PI
                  * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            //kt2 = 4.
+            //      * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            // Use numerically cheaper equivalent
+            kt2 = 4. - 2. * (cos(kx) + cos(ky));
             if (m == 0) {
                 if (kt2 != 0) {
                     for (int n = 0; n < Nc2m1_; n++) {
@@ -1873,6 +1841,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
             std::vector<double> in(Nc2m1_, 0.);
             Matrix temp(Nc_, 1.);
             Matrix tempNew(Nc_, 0.);
+            std::vector<complex<double>> scratchU(9);
 
 #pragma omp for
             for (int pos = 0; pos < N * N; pos++) {
@@ -1881,7 +1850,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
                     // just multiply by -1 (not -i)
                     in[aa] = -(rhoACoeff[aa][pos]).real();
                 }
-                tempNew = getUfromExponent(in);
+                getUfromExponent(in, tempNew, scratchU);
                 temp = tempNew * lat->cells[pos]->getU2();
 
                 // set U
@@ -1891,8 +1860,8 @@ void Init::setV(Lattice *lat, Parameters *param) {
 
     }  // Ny loop
 
-    for (int ic = 0; ic < Nc2m1_; ic++) {
-        delete[] rhoACoeff[ic];
+    for (int i = 0; i < Nc2m1_; i++) {
+        delete[] rhoACoeff[i];
     }
     delete[] rhoACoeff;
 
@@ -1910,7 +1879,7 @@ void Init::setV(Lattice *lat, Parameters *param) {
         lat->WriteWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
     }
 
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+    messager << "Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
     messager.flush("info");
 }
@@ -2042,7 +2011,7 @@ void Init::readV2(Lattice *lat, Parameters *param, Glauber *glauber) {
        cout << "wrote " << strVTwo_names.str() << endl;
      */
 
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+    messager << "Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
     messager.flush("info");
 }
@@ -2358,7 +2327,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         }
     }
 
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+    messager << "Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
     messager.flush("info");
 }
@@ -3260,16 +3229,16 @@ void Init::sampleQsNormalization(
     Random *random, Parameters *param, const int Nq,
     vector<double> &gauss_array) {
     const double QsSmearWidth = param->getSmearingWidth();
-    gauss_array.resize(Nq, 1.);  // default norm = 1
+    gauss_array.assign(Nq, 1.);  // assign (not resize) to overwrite previous values
     if (param->getSmearQs() == 1) {
         // introduce a log-normal distribution for Qs normalization
         // dividing by exp(0.5 sigma^2) to ensure the mean is 1
-        // the varirance in this case is exp(sigma) - 1 for the log-normal
+        // the variance in this case is exp(sigma) - 1 for the log-normal
         // distribution
+        const double invNormFactor = exp(-QsSmearWidth * QsSmearWidth / 2.);
         for (int iq = 0; iq < Nq; iq++) {
             gauss_array[iq] =
-                (exp(random->Gauss(0, QsSmearWidth))
-                 / exp(QsSmearWidth * QsSmearWidth / 2.));
+                exp(random->Gauss(0, QsSmearWidth)) * invNormFactor;
         }
     }
 }
@@ -3566,4 +3535,28 @@ Matrix Init::getUfromExponent(std::vector<double> &in) {
              + U[8] * group_ptr_->getT(7));
     }
     return (tempM);
+}
+
+// Allocation-free overload for use in hot loops: writes the result directly
+// into pre-allocated `out` (already sized Nc x Nc) using a pre-allocated
+// `scratch` vector (sized 9).  Eliminates every heap allocation that the
+// returning overload incurs on each call.
+void Init::getUfromExponent(std::vector<double> &in, Matrix &out,
+                             std::vector<complex<double>> &scratch) {
+    // Compute the 9 SU(3) exponent coefficients into scratch (no alloc)
+    out.expmCoeff(in, Nc_, scratch);
+    if (std::abs(scratch[0].real()) < 1e-15) {
+        out = one_;
+    } else {
+        // Initialise out = scratch[0] * identity, row-major, Nc_=3
+        for (int r = 0; r < Nc_; r++) {
+            for (int c = 0; c < Nc_; c++) {
+                out.set(r, c, (r == c) ? scratch[0] : complex<double>(0.));
+            }
+        }
+        // Accumulate: out += scratch[k+1] * T[k], k = 0..7 (no temporaries)
+        for (int k = 0; k < 8; k++) {
+            out.addScaled(scratch[k + 1], group_ptr_->getT(k));
+        }
+    }
 }

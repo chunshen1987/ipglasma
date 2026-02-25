@@ -89,6 +89,10 @@ class Init {
     void multiplicity(Lattice *lat, Parameters *param);
 
     Matrix getUfromExponent(std::vector<double> &in);
+    // Allocation-free overload: writes directly into pre-allocated Matrix and
+    // scratch vector, eliminating all heap allocations in the hot loop.
+    void getUfromExponent(std::vector<double> &in, Matrix &out,
+                          std::vector<complex<double>> &scratch);
     bool findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol);
     bool findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol);
 

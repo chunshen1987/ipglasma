@@ -1,12 +1,20 @@
 #ifndef Cell_h
 #define Cell_h
 
+#include <array>
 #include <complex>
 #include <cstdlib>
 #include <iostream>
-#include <vector>
+#include <memory>
 
 #include "Matrix.h"
+
+// Hydro tensor data — bundled into one allocation, only present in mode=1 cells
+struct HydroData {
+    std::array<double, 10> Tmunu = {};
+    std::array<double, 10> pimunu = {};
+    std::array<double, 4> umu = {};
+};
 
 class Cell {
   private:
@@ -40,11 +48,7 @@ class Cell {
 
     //  bool parity; // Parity of the cell (needed for Gauge fixing)
 
-    std::vector<double> Tmunu;
-
-    std::vector<double> pimunu;
-
-    std::vector<double> umu;
+    std::unique_ptr<HydroData> hydro_;  // only allocated for mode=1 cells
 
   public:
     Cell(const int Nc, const int mode);
@@ -81,56 +85,56 @@ class Cell {
     void setEpsilon(const double in) { epsilon = in; };
     double getEpsilon() { return epsilon; };
 
-    void setTtautau(const double in) { Tmunu[0] = in; };
-    double getTtautau() { return Tmunu[0]; };
-    void setTxx(const double in) { Tmunu[4] = in; };
-    double getTxx() { return Tmunu[4]; };
-    void setTyy(const double in) { Tmunu[7] = in; };
-    double getTyy() { return Tmunu[7]; };
-    void setTxy(const double in) { Tmunu[5] = in; };
-    double getTxy() { return Tmunu[5]; };
-    void setTetaeta(const double in) { Tmunu[9] = in; };
-    double getTetaeta() { return Tmunu[9]; };
-    void setTtaux(const double in) { Tmunu[1] = in; };
-    double getTtaux() { return Tmunu[1]; };
-    void setTtauy(const double in) { Tmunu[2] = in; };
-    double getTtauy() { return Tmunu[2]; };
-    void setTtaueta(const double in) { Tmunu[3] = in; };
-    double getTtaueta() { return Tmunu[3]; };
-    void setTxeta(const double in) { Tmunu[6] = in; };
-    double getTxeta() { return Tmunu[6]; };
-    void setTyeta(const double in) { Tmunu[8] = in; };
-    double getTyeta() { return Tmunu[8]; };
+    void setTtautau(const double in) { hydro_->Tmunu[0] = in; };
+    double getTtautau() { return hydro_->Tmunu[0]; };
+    void setTxx(const double in) { hydro_->Tmunu[4] = in; };
+    double getTxx() { return hydro_->Tmunu[4]; };
+    void setTyy(const double in) { hydro_->Tmunu[7] = in; };
+    double getTyy() { return hydro_->Tmunu[7]; };
+    void setTxy(const double in) { hydro_->Tmunu[5] = in; };
+    double getTxy() { return hydro_->Tmunu[5]; };
+    void setTetaeta(const double in) { hydro_->Tmunu[9] = in; };
+    double getTetaeta() { return hydro_->Tmunu[9]; };
+    void setTtaux(const double in) { hydro_->Tmunu[1] = in; };
+    double getTtaux() { return hydro_->Tmunu[1]; };
+    void setTtauy(const double in) { hydro_->Tmunu[2] = in; };
+    double getTtauy() { return hydro_->Tmunu[2]; };
+    void setTtaueta(const double in) { hydro_->Tmunu[3] = in; };
+    double getTtaueta() { return hydro_->Tmunu[3]; };
+    void setTxeta(const double in) { hydro_->Tmunu[6] = in; };
+    double getTxeta() { return hydro_->Tmunu[6]; };
+    void setTyeta(const double in) { hydro_->Tmunu[8] = in; };
+    double getTyeta() { return hydro_->Tmunu[8]; };
 
-    void setpitautau(const double in) { pimunu[0] = in; };
-    double getpitautau() { return pimunu[0]; };
-    void setpixx(const double in) { pimunu[4] = in; };
-    double getpixx() { return pimunu[4]; };
-    void setpiyy(const double in) { pimunu[7] = in; };
-    double getpiyy() { return pimunu[7]; };
-    void setpixy(const double in) { pimunu[5] = in; };
-    double getpixy() { return pimunu[5]; };
-    void setpietaeta(const double in) { pimunu[9] = in; };
-    double getpietaeta() { return pimunu[9]; };
-    void setpitaux(const double in) { pimunu[1] = in; };
-    double getpitaux() { return pimunu[1]; };
-    void setpitauy(const double in) { pimunu[2] = in; };
-    double getpitauy() { return pimunu[2]; };
-    void setpitaueta(const double in) { pimunu[3] = in; };
-    double getpitaueta() { return pimunu[3]; };
-    void setpixeta(const double in) { pimunu[6] = in; };
-    double getpixeta() { return pimunu[6]; };
-    void setpiyeta(const double in) { pimunu[8] = in; };
-    double getpiyeta() { return pimunu[8]; };
+    void setpitautau(const double in) { hydro_->pimunu[0] = in; };
+    double getpitautau() { return hydro_->pimunu[0]; };
+    void setpixx(const double in) { hydro_->pimunu[4] = in; };
+    double getpixx() { return hydro_->pimunu[4]; };
+    void setpiyy(const double in) { hydro_->pimunu[7] = in; };
+    double getpiyy() { return hydro_->pimunu[7]; };
+    void setpixy(const double in) { hydro_->pimunu[5] = in; };
+    double getpixy() { return hydro_->pimunu[5]; };
+    void setpietaeta(const double in) { hydro_->pimunu[9] = in; };
+    double getpietaeta() { return hydro_->pimunu[9]; };
+    void setpitaux(const double in) { hydro_->pimunu[1] = in; };
+    double getpitaux() { return hydro_->pimunu[1]; };
+    void setpitauy(const double in) { hydro_->pimunu[2] = in; };
+    double getpitauy() { return hydro_->pimunu[2]; };
+    void setpitaueta(const double in) { hydro_->pimunu[3] = in; };
+    double getpitaueta() { return hydro_->pimunu[3]; };
+    void setpixeta(const double in) { hydro_->pimunu[6] = in; };
+    double getpixeta() { return hydro_->pimunu[6]; };
+    void setpiyeta(const double in) { hydro_->pimunu[8] = in; };
+    double getpiyeta() { return hydro_->pimunu[8]; };
 
-    void setutau(const double in) { umu[0] = in; };
-    double getutau() { return umu[0]; };
-    void setux(const double in) { umu[1] = in; };
-    double getux() { return umu[1]; };
-    void setuy(const double in) { umu[2] = in; };
-    double getuy() { return umu[2]; };
-    void setueta(const double in) { umu[3] = in; };
-    double getueta() { return umu[3]; };
+    void setutau(const double in) { hydro_->umu[0] = in; };
+    double getutau() { return hydro_->umu[0]; };
+    void setux(const double in) { hydro_->umu[1] = in; };
+    double getux() { return hydro_->umu[1]; };
+    void setuy(const double in) { hydro_->umu[2] = in; };
+    double getuy() { return hydro_->umu[2]; };
+    void setueta(const double in) { hydro_->umu[3] = in; };
+    double getueta() { return hydro_->umu[3]; };
 
     Matrix &getg() const { return *Ux1; };  // use unused Ux1 to store g
     Matrix &getU() const { return *U; };
